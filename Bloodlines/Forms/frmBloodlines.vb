@@ -1,0 +1,57 @@
+Imports System.IO
+Imports Bloodlines.Bloodlines
+
+Public Class frmBloodlines
+   Private Tree As FamilyTree
+   Dim lstTrees As ListBox = New ListBox()
+
+   Private Sub tsBtnAdd_Click(sender As Object, e As EventArgs) Handles tsBtnAdd.Click
+      frmPerson.Tree = Tree
+      frmPerson.ShowDialog()
+   End Sub
+
+   Private Sub tsBtnList_Click(sender As Object, e As EventArgs) Handles tsBtnList.Click
+      pnlPlaceholder.Controls.Clear()
+      Dim frmChild As Form = Nothing
+      frmChild = New frmListMembers
+      If frmChild IsNot Nothing Then
+         frmChild.TopLevel = False
+         frmChild.FormBorderStyle = FormBorderStyle.None
+         frmChild.Dock = DockStyle.Fill
+         pnlPlaceholder.Controls.Add(frmChild)
+         frmChild.Show()
+      End If
+   End Sub
+
+   Private Sub frmBloodlines_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+      lstTrees.Left = 3
+      lstTrees.Top = 3
+      lstTrees.Width = 200
+      lstTrees.Height = pnlPlaceholder.Height - 6
+      lstTrees.Dock = DockStyle.Left And DockStyle.Top And DockStyle.Bottom
+      AddHandler lstTrees.DoubleClick, AddressOf lstTrees_DoubleClick
+      pnlPlaceholder.Controls.Add(lstTrees)
+      lstTrees.Visible = False
+   End Sub
+
+   Private Sub tsBtnTree_Click(sender As Object, e As EventArgs) Handles tsBtnLoad.Click
+      lstTrees.Visible = True
+
+      Dim treePath As String = Application.StartupPath & "Trees"
+      If Directory.Exists(treePath) Then
+         For Each file As String In Directory.GetFiles(treePath, "*.json")
+            lstTrees.Items.Add(Path.GetFileNameWithoutExtension(file))
+         Next
+      End If
+
+   End Sub
+
+   Private Sub lstTrees_DoubleClick(sender As Object, e As EventArgs)
+      Dim lst As ListBox = CType(sender, ListBox)
+      If lst.SelectedItem Is Nothing Then Return
+      Tree = FamilyTree.Load(lst.SelectedItem.ToString())
+      lstTrees.Visible = False
+      lstTrees.Items.Clear()
+   End Sub
+
+End Class
