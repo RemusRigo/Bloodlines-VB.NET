@@ -1,6 +1,10 @@
-﻿Imports Bloodlines.Bloodlines
+﻿Imports System.ComponentModel
+Imports Bloodlines.Bloodlines
 
 Public Class frmListMembers
+   <Browsable(False)>
+   <DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)>
+   Public Property Tree As FamilyTree
 
    Private Sub LoadMembers(ft As FamilyTree)
       lvMembers.BeginUpdate()
@@ -23,9 +27,7 @@ Public Class frmListMembers
       lvMembers.Columns.Add("First Name", 100, HorizontalAlignment.Left)
       lvMembers.Columns.Add("Last Name", 100, HorizontalAlignment.Left)
       lvMembers.FullRowSelect = True
-      'lvMembers.HeaderStyle = ColumnHeaderStyle.None
 
-      Dim ft As FamilyTree = FamilyTree.Load("FamilyTree.json")
-      LoadMembers(ft)
+      LoadMembers(Tree)
    End Sub
 End Class

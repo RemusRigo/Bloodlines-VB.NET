@@ -1,8 +1,14 @@
+Imports System.ComponentModel
 Imports System.IO
 Imports Bloodlines.Bloodlines
 
 Public Class frmBloodlines
-   Private Tree As FamilyTree
+   <Browsable(False)>
+   <DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)>
+   Public Property Tree As FamilyTree
+   <Browsable(False)>
+   <DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)>
+   Public Property jsonTreePath As String
    Dim lstTrees As ListBox = New ListBox()
 
    Private Sub tsBtnAdd_Click(sender As Object, e As EventArgs) Handles tsBtnAdd.Click
@@ -11,15 +17,19 @@ Public Class frmBloodlines
    End Sub
 
    Private Sub tsBtnList_Click(sender As Object, e As EventArgs) Handles tsBtnList.Click
-      pnlPlaceholder.Controls.Clear()
-      Dim frmChild As Form = Nothing
-      frmChild = New frmListMembers
-      If frmChild IsNot Nothing Then
-         frmChild.TopLevel = False
-         frmChild.FormBorderStyle = FormBorderStyle.None
-         frmChild.Dock = DockStyle.Fill
-         pnlPlaceholder.Controls.Add(frmChild)
-         frmChild.Show()
+      If Tree Is Nothing Then
+         MessageBox.Show("No family tree loaded.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+      Else
+         pnlPlaceholder.Controls.Clear()
+         Dim frmChild As New frmListMembers
+         If frmChild IsNot Nothing Then
+            frmChild.TopLevel = False
+            frmChild.FormBorderStyle = FormBorderStyle.None
+            frmChild.Dock = DockStyle.Fill
+            frmChild.Tree = Me.Tree
+            pnlPlaceholder.Controls.Add(frmChild)
+            frmChild.Show()
+         End If
       End If
    End Sub
 
@@ -48,10 +58,11 @@ Public Class frmBloodlines
 
    Private Sub lstTrees_DoubleClick(sender As Object, e As EventArgs)
       Dim lst As ListBox = CType(sender, ListBox)
-      If lst.SelectedItem Is Nothing Then Return
-      Tree = FamilyTree.Load(lst.SelectedItem.ToString())
+      jsonTreePath = Path.Combine(Application.StartupPath, "Trees", lst.SelectedItem.ToString() & ".json")
+      Tree = FamilyTree.Load(jsonTreePath)
       lstTrees.Visible = False
       lstTrees.Items.Clear()
+      ssStatusLabel.Text = "Loaded " & Tree.People.Count & " people."
    End Sub
 
 End Class

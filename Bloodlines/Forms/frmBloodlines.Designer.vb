@@ -23,8 +23,9 @@ Partial Class frmBloodlines
    <System.Diagnostics.DebuggerStepThrough()>
    Private Sub InitializeComponent()
       Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(frmBloodlines))
-      StatusStrip1 = New StatusStrip()
-      ToolStrip1 = New ToolStrip()
+      StatusStrip = New StatusStrip()
+      ssStatusLabel = New ToolStripStatusLabel()
+      ToolStrip = New ToolStrip()
       tsBtnNew = New ToolStripButton()
       tsBtnLoad = New ToolStripButton()
       tsBtnSave = New ToolStripButton()
@@ -34,25 +35,31 @@ Partial Class frmBloodlines
       tsBtnAdd = New ToolStripButton()
       ToolStripButton2 = New ToolStripButton()
       pnlPlaceholder = New Panel()
-      ToolStrip1.SuspendLayout()
+      StatusStrip.SuspendLayout()
+      ToolStrip.SuspendLayout()
       SuspendLayout()
       ' 
-      ' StatusStrip1
+      ' StatusStrip
       ' 
-      StatusStrip1.Location = New Point(0, 428)
-      StatusStrip1.Name = "StatusStrip1"
-      StatusStrip1.Size = New Size(800, 22)
-      StatusStrip1.TabIndex = 0
-      StatusStrip1.Text = "StatusStrip"
+      StatusStrip.Items.AddRange(New ToolStripItem() {ssStatusLabel})
+      StatusStrip.Location = New Point(0, 428)
+      StatusStrip.Name = "StatusStrip"
+      StatusStrip.Size = New Size(800, 22)
+      StatusStrip.TabIndex = 0
       ' 
-      ' ToolStrip1
+      ' ssStatusLabel
       ' 
-      ToolStrip1.Items.AddRange(New ToolStripItem() {tsBtnNew, tsBtnLoad, tsBtnSave, tsBtnSep1, tsBtnList, ToolStripSeparator1, tsBtnAdd, ToolStripButton2})
-      ToolStrip1.Location = New Point(0, 0)
-      ToolStrip1.Name = "ToolStrip1"
-      ToolStrip1.Size = New Size(800, 25)
-      ToolStrip1.TabIndex = 1
-      ToolStrip1.Text = "ToolStrip"
+      ssStatusLabel.Name = "ssStatusLabel"
+      ssStatusLabel.Size = New Size(0, 17)
+      ' 
+      ' ToolStrip
+      ' 
+      ToolStrip.Items.AddRange(New ToolStripItem() {tsBtnNew, tsBtnLoad, tsBtnSave, tsBtnSep1, tsBtnList, ToolStripSeparator1, tsBtnAdd, ToolStripButton2})
+      ToolStrip.Location = New Point(0, 0)
+      ToolStrip.Name = "ToolStrip"
+      ToolStrip.Size = New Size(800, 25)
+      ToolStrip.TabIndex = 1
+      ToolStrip.Text = "ToolStrip"
       ' 
       ' tsBtnNew
       ' 
@@ -130,22 +137,24 @@ Partial Class frmBloodlines
       ' 
       ' frmBloodlines
       ' 
-      AutoScaleDimensions = New SizeF(7.0F, 15.0F)
+      AutoScaleDimensions = New SizeF(7F, 15F)
       AutoScaleMode = AutoScaleMode.Font
       ClientSize = New Size(800, 450)
       Controls.Add(pnlPlaceholder)
-      Controls.Add(ToolStrip1)
-      Controls.Add(StatusStrip1)
+      Controls.Add(ToolStrip)
+      Controls.Add(StatusStrip)
       Name = "frmBloodlines"
       Text = "Bloodlines"
-      ToolStrip1.ResumeLayout(False)
-      ToolStrip1.PerformLayout()
+      StatusStrip.ResumeLayout(False)
+      StatusStrip.PerformLayout()
+      ToolStrip.ResumeLayout(False)
+      ToolStrip.PerformLayout()
       ResumeLayout(False)
       PerformLayout()
    End Sub
 
-   Friend WithEvents StatusStrip1 As StatusStrip
-   Friend WithEvents ToolStrip1 As ToolStrip
+   Friend WithEvents StatusStrip As StatusStrip
+   Friend WithEvents ToolStrip As ToolStrip
    Friend WithEvents tsBtnAdd As ToolStripButton
    Friend WithEvents pnlPlaceholder As Panel
    Friend WithEvents tsBtnSep1 As ToolStripSeparator
@@ -156,5 +165,6 @@ Partial Class frmBloodlines
    Friend WithEvents tsBtnSave As ToolStripButton
    Friend WithEvents tsBtnNew As ToolStripButton
    Friend WithEvents ToolStripButton2 As ToolStripButton
+   Friend WithEvents ssStatusLabel As ToolStripStatusLabel
 
 End Class
