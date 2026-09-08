@@ -8,6 +8,7 @@ Namespace Bloodlines
    Public Class FamilyTree
       Public Property Version As Integer = 1   ' stamp the format; useful later
       Public Property People As New List(Of Person)
+      Public Property SourcePath As String
 
       Public Shared ReadOnly Property DefaultPath As String
          Get
@@ -25,15 +26,31 @@ Namespace Bloodlines
          Return People.Where(Function(p) p.Relationships.Any(Function(r) r.OtherId = personId AndAlso (r.Type = RelationType.Father OrElse r.Type = RelationType.Mother))).ToList()
       End Function
 
+      Public Sub Save()
+         If String.IsNullOrEmpty(SourcePath) Then
+            Throw New InvalidOperationException("This family tree has no SourcePath yet; call Save(path) once.")
+         End If
+         Save(SourcePath)
+      End Sub
+
       Public Sub Save(path As String)
          Dim opts As New JsonSerializerOptions With {.WriteIndented = True}
          File.WriteAllText(path, JsonSerializer.Serialize(Me, opts))
+         SourcePath = path
       End Sub
 
       Public Shared Function Load(path As String) As FamilyTree
-         If Not File.Exists(path) Then Return New FamilyTree()
-         Return JsonSerializer.Deserialize(Of FamilyTree)(File.ReadAllText(path))
+         Dim tree As FamilyTree
+         If Not File.Exists(path) Then
+            tree = New FamilyTree()
+         Else
+            tree = JsonSerializer.Deserialize(Of FamilyTree)(File.ReadAllText(path))
+            If tree Is Nothing Then tree = New FamilyTree()
+         End If
+         tree.SourcePath = path
+         Return tree
       End Function
+
 
    End Class
 

@@ -13,5 +13,8 @@
     <Compile Update="Forms\frmPerson.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="Forms\frmTree.vb">
+      <SubType>Form</SubType>
+    </Compile>
   </ItemGroup>
 </Project>

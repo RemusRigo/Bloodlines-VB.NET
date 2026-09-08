@@ -38,14 +38,25 @@ Partial Class frmPerson
       dtPickerDeathDate = New DateTimePicker()
       chkBoxDeathDate = New CheckBox()
       chkBoxBirthDate = New CheckBox()
+      grpBoxConnections = New GroupBox()
+      lstBoxConnections = New ListBox()
+      btnRemoveConection = New Button()
+      btnAddConection = New Button()
+      cbPerson = New ComboBox()
+      lblPersonID = New Label()
+      cbRelation = New ComboBox()
+      lblRelation = New Label()
+      btnPrev = New Button()
+      btnNext = New Button()
       grpBoxNotes.SuspendLayout()
       CType(picBoxProfile, ComponentModel.ISupportInitialize).BeginInit()
+      grpBoxConnections.SuspendLayout()
       SuspendLayout()
       ' 
       ' btnOk
       ' 
       btnOk.Anchor = AnchorStyles.Bottom Or AnchorStyles.Right
-      btnOk.Location = New Point(863, 424)
+      btnOk.Location = New Point(1090, 409)
       btnOk.Name = "btnOk"
       btnOk.Size = New Size(40, 23)
       btnOk.TabIndex = 0
@@ -66,6 +77,7 @@ Partial Class frmPerson
       txtBoxID.Location = New Point(98, 6)
       txtBoxID.Name = "txtBoxID"
       txtBoxID.PlaceholderText = "ID"
+      txtBoxID.ReadOnly = True
       txtBoxID.Size = New Size(121, 23)
       txtBoxID.TabIndex = 2
       ' 
@@ -124,9 +136,9 @@ Partial Class frmPerson
       ' 
       grpBoxNotes.Anchor = AnchorStyles.Top Or AnchorStyles.Bottom Or AnchorStyles.Right
       grpBoxNotes.Controls.Add(txtBoxNotes)
-      grpBoxNotes.Location = New Point(318, 12)
+      grpBoxNotes.Location = New Point(545, 6)
       grpBoxNotes.Name = "grpBoxNotes"
-      grpBoxNotes.Size = New Size(279, 394)
+      grpBoxNotes.Size = New Size(279, 400)
       grpBoxNotes.TabIndex = 14
       grpBoxNotes.TabStop = False
       grpBoxNotes.Text = "Notes"
@@ -138,13 +150,13 @@ Partial Class frmPerson
       txtBoxNotes.Multiline = True
       txtBoxNotes.Name = "txtBoxNotes"
       txtBoxNotes.PlaceholderText = "Notes"
-      txtBoxNotes.Size = New Size(273, 372)
+      txtBoxNotes.Size = New Size(273, 378)
       txtBoxNotes.TabIndex = 3
       ' 
       ' picBoxProfile
       ' 
       picBoxProfile.Anchor = AnchorStyles.Top Or AnchorStyles.Right
-      picBoxProfile.Location = New Point(603, 6)
+      picBoxProfile.Location = New Point(830, 6)
       picBoxProfile.Name = "picBoxProfile"
       picBoxProfile.Size = New Size(300, 400)
       picBoxProfile.TabIndex = 15
@@ -186,11 +198,112 @@ Partial Class frmPerson
       chkBoxBirthDate.Text = "Birth Date"
       chkBoxBirthDate.UseVisualStyleBackColor = True
       ' 
+      ' grpBoxConnections
+      ' 
+      grpBoxConnections.Controls.Add(lstBoxConnections)
+      grpBoxConnections.Controls.Add(btnRemoveConection)
+      grpBoxConnections.Controls.Add(btnAddConection)
+      grpBoxConnections.Controls.Add(cbPerson)
+      grpBoxConnections.Controls.Add(lblPersonID)
+      grpBoxConnections.Controls.Add(cbRelation)
+      grpBoxConnections.Controls.Add(lblRelation)
+      grpBoxConnections.Location = New Point(239, 6)
+      grpBoxConnections.Name = "grpBoxConnections"
+      grpBoxConnections.Size = New Size(300, 400)
+      grpBoxConnections.TabIndex = 20
+      grpBoxConnections.TabStop = False
+      grpBoxConnections.Text = "Connections"
+      ' 
+      ' lstBoxConnections
+      ' 
+      lstBoxConnections.FormattingEnabled = True
+      lstBoxConnections.Location = New Point(6, 113)
+      lstBoxConnections.Name = "lstBoxConnections"
+      lstBoxConnections.Size = New Size(288, 274)
+      lstBoxConnections.TabIndex = 16
+      ' 
+      ' btnRemoveConection
+      ' 
+      btnRemoveConection.Location = New Point(35, 84)
+      btnRemoveConection.Name = "btnRemoveConection"
+      btnRemoveConection.Size = New Size(23, 23)
+      btnRemoveConection.TabIndex = 15
+      btnRemoveConection.Text = "-"
+      btnRemoveConection.UseVisualStyleBackColor = True
+      ' 
+      ' btnAddConection
+      ' 
+      btnAddConection.Location = New Point(6, 84)
+      btnAddConection.Name = "btnAddConection"
+      btnAddConection.Size = New Size(23, 23)
+      btnAddConection.TabIndex = 14
+      btnAddConection.Text = "+"
+      btnAddConection.UseVisualStyleBackColor = True
+      ' 
+      ' cbPerson
+      ' 
+      cbPerson.DropDownStyle = ComboBoxStyle.DropDownList
+      cbPerson.FormattingEnabled = True
+      cbPerson.Location = New Point(86, 51)
+      cbPerson.Name = "cbPerson"
+      cbPerson.Size = New Size(121, 23)
+      cbPerson.TabIndex = 13
+      ' 
+      ' lblPersonID
+      ' 
+      lblPersonID.AutoSize = True
+      lblPersonID.Location = New Point(6, 54)
+      lblPersonID.Name = "lblPersonID"
+      lblPersonID.Size = New Size(60, 15)
+      lblPersonID.TabIndex = 12
+      lblPersonID.Text = "Person ID:"
+      ' 
+      ' cbRelation
+      ' 
+      cbRelation.DropDownStyle = ComboBoxStyle.DropDownList
+      cbRelation.FormattingEnabled = True
+      cbRelation.Location = New Point(86, 22)
+      cbRelation.Name = "cbRelation"
+      cbRelation.Size = New Size(121, 23)
+      cbRelation.TabIndex = 11
+      ' 
+      ' lblRelation
+      ' 
+      lblRelation.AutoSize = True
+      lblRelation.Location = New Point(6, 25)
+      lblRelation.Name = "lblRelation"
+      lblRelation.Size = New Size(53, 15)
+      lblRelation.TabIndex = 10
+      lblRelation.Text = "Relation:"
+      ' 
+      ' btnPrev
+      ' 
+      btnPrev.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
+      btnPrev.Location = New Point(12, 409)
+      btnPrev.Name = "btnPrev"
+      btnPrev.Size = New Size(23, 23)
+      btnPrev.TabIndex = 21
+      btnPrev.Text = "&<"
+      btnPrev.UseVisualStyleBackColor = True
+      ' 
+      ' btnNext
+      ' 
+      btnNext.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
+      btnNext.Location = New Point(41, 409)
+      btnNext.Name = "btnNext"
+      btnNext.Size = New Size(23, 23)
+      btnNext.TabIndex = 22
+      btnNext.Text = "&>"
+      btnNext.UseVisualStyleBackColor = True
+      ' 
       ' frmPerson
       ' 
       AutoScaleDimensions = New SizeF(7F, 15F)
       AutoScaleMode = AutoScaleMode.Font
-      ClientSize = New Size(908, 450)
+      ClientSize = New Size(1135, 435)
+      Controls.Add(btnNext)
+      Controls.Add(btnPrev)
+      Controls.Add(grpBoxConnections)
       Controls.Add(chkBoxBirthDate)
       Controls.Add(chkBoxDeathDate)
       Controls.Add(dtPickerDeathDate)
@@ -211,6 +324,8 @@ Partial Class frmPerson
       grpBoxNotes.ResumeLayout(False)
       grpBoxNotes.PerformLayout()
       CType(picBoxProfile, ComponentModel.ISupportInitialize).EndInit()
+      grpBoxConnections.ResumeLayout(False)
+      grpBoxConnections.PerformLayout()
       ResumeLayout(False)
       PerformLayout()
    End Sub
@@ -231,4 +346,14 @@ Partial Class frmPerson
    Friend WithEvents dtPickerDeathDate As DateTimePicker
    Friend WithEvents chkBoxDeathDate As CheckBox
    Friend WithEvents chkBoxBirthDate As CheckBox
+   Friend WithEvents grpBoxConnections As GroupBox
+   Friend WithEvents cbRelation As ComboBox
+   Friend WithEvents lblRelation As Label
+   Friend WithEvents cbPerson As ComboBox
+   Friend WithEvents lblPersonID As Label
+   Friend WithEvents btnPrev As Button
+   Friend WithEvents btnNext As Button
+   Friend WithEvents lstBoxConnections As ListBox
+   Friend WithEvents btnRemoveConection As Button
+   Friend WithEvents btnAddConection As Button
 End Class
