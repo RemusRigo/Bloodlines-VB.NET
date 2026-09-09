@@ -9,8 +9,19 @@ Public Class frmBloodlines
    <Browsable(False)>
    <DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)>
    Public Property jsonTreePath As String
+
+   Private lastForm As Form
+
    Dim lstTrees As ListBox = New ListBox()
 
+   Private Sub ClearPlaceholder()
+      If lastForm IsNot Nothing Then
+         pnlPlaceholder.Controls.Remove(lastForm)
+         lastForm.Dispose()
+         lastForm = Nothing
+      End If
+      'pnlPlaceholder.Controls.Clear()
+   End Sub
    Private Sub frmBloodlines_Load(sender As Object, e As EventArgs) Handles MyBase.Load
       lstTrees.Left = 3
       lstTrees.Top = 3
@@ -20,13 +31,19 @@ Public Class frmBloodlines
       AddHandler lstTrees.DoubleClick, AddressOf lstTrees_DoubleClick
       pnlPlaceholder.Controls.Add(lstTrees)
       lstTrees.Visible = False
+      tsBtnLoad_Click(Nothing, Nothing)
    End Sub
 
    Private Sub tsBtnNew_Click(sender As Object, e As EventArgs) Handles tsBtnNew.Click
-      '
+      pnlPlaceholder.Controls.Clear()
+      Dim treeName As String = InputBox("Enter a name for the new family tree:", "Name")
+      If treeName.Length = 0 Then Return
+      Tree = New FamilyTree(treeName)
    End Sub
 
    Private Sub tsBtnLoad_Click(sender As Object, e As EventArgs) Handles tsBtnLoad.Click
+      ClearPlaceholder()
+      lstTrees.Items.Clear()
       lstTrees.Visible = True
 
       Dim treePath As String = Application.StartupPath & "Trees"
@@ -42,10 +59,10 @@ Public Class frmBloodlines
    End Sub
 
    Private Sub tsBtnList_Click(sender As Object, e As EventArgs) Handles tsBtnList.Click
+      ClearPlaceholder()
       If Tree Is Nothing Then
          MessageBox.Show("No family tree loaded.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
       Else
-         pnlPlaceholder.Controls.Clear()
          Dim frmChild As New frmListMembers
          If frmChild IsNot Nothing Then
             frmChild.TopLevel = False
@@ -55,14 +72,15 @@ Public Class frmBloodlines
             pnlPlaceholder.Controls.Add(frmChild)
             frmChild.Show()
          End If
+         lastForm = frmChild
       End If
    End Sub
 
    Private Sub tsBtnTree_Click(sender As Object, e As EventArgs) Handles tsBtnTree.Click
+      ClearPlaceholder()
       If Tree Is Nothing Then
          MessageBox.Show("No family tree loaded.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
       Else
-         pnlPlaceholder.Controls.Clear()
          Dim frmChild As New frmTree
          If frmChild IsNot Nothing Then
             frmChild.TopLevel = False
@@ -72,16 +90,19 @@ Public Class frmBloodlines
             pnlPlaceholder.Controls.Add(frmChild)
             frmChild.Show()
          End If
+         lastForm = frmChild
       End If
    End Sub
 
    Private Sub tsBtnAddMember_Click(sender As Object, e As EventArgs) Handles tsBtnAddMember.Click
+      ClearPlaceholder()
       frmPerson.Tree = Tree
       frmPerson.newID = True
       frmPerson.ShowDialog()
    End Sub
 
    Private Sub tsBtnViewMembers_Click(sender As Object, e As EventArgs) Handles tsBtnViewMembers.Click
+      ClearPlaceholder()
       frmPerson.Tree = Tree
       frmPerson.newID = False
       frmPerson.ShowDialog()

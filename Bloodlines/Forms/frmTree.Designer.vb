@@ -23,10 +23,7 @@ Partial Class frmTree
    <System.Diagnostics.DebuggerStepThrough()> _
    Private Sub InitializeComponent()
       pnlChart = New ChartPanel()
-      pnlTop = New Panel()
-      lblFocus = New Label()
-      cboFocus = New ComboBox()
-      pnlTop.SuspendLayout()
+      btnSetFocus = New Button()
       SuspendLayout()
       '
       ' pnlChart
@@ -34,39 +31,22 @@ Partial Class frmTree
       pnlChart.AutoScroll = True
       pnlChart.BackColor = SystemColors.Window
       pnlChart.Dock = DockStyle.Fill
-      pnlChart.Location = New Point(0, 34)
+      pnlChart.Location = New Point(0, 0)
       pnlChart.Name = "pnlChart"
-      pnlChart.Size = New Size(800, 416)
-      pnlChart.TabIndex = 1
+      pnlChart.Size = New Size(800, 450)
+      pnlChart.TabIndex = 0
       '
-      ' pnlTop
+      ' btnSetFocus
       '
-      pnlTop.Controls.Add(cboFocus)
-      pnlTop.Controls.Add(lblFocus)
-      pnlTop.Dock = DockStyle.Top
-      pnlTop.Location = New Point(0, 0)
-      pnlTop.Name = "pnlTop"
-      pnlTop.Padding = New Padding(8, 6, 8, 6)
-      pnlTop.Size = New Size(800, 34)
-      pnlTop.TabIndex = 0
-      '
-      ' lblFocus
-      '
-      lblFocus.AutoSize = True
-      lblFocus.Location = New Point(8, 9)
-      lblFocus.Name = "lblFocus"
-      lblFocus.Size = New Size(78, 15)
-      lblFocus.TabIndex = 0
-      lblFocus.Text = "Focus person:"
-      '
-      ' cboFocus
-      '
-      cboFocus.DropDownStyle = ComboBoxStyle.DropDownList
-      cboFocus.FormattingEnabled = True
-      cboFocus.Location = New Point(95, 5)
-      cboFocus.Name = "cboFocus"
-      cboFocus.Size = New Size(280, 23)
-      cboFocus.TabIndex = 1
+      btnSetFocus.Anchor = AnchorStyles.Top Or AnchorStyles.Left
+      btnSetFocus.Cursor = Cursors.Hand
+      btnSetFocus.Font = New Font("Segoe UI Emoji", 12.0F)
+      btnSetFocus.Location = New Point(8, 8)
+      btnSetFocus.Name = "btnSetFocus"
+      btnSetFocus.Size = New Size(32, 32)
+      btnSetFocus.TabIndex = 1
+      btnSetFocus.Text = "🎯"
+      btnSetFocus.UseVisualStyleBackColor = True
       '
       ' frmTree
       '
@@ -74,16 +54,13 @@ Partial Class frmTree
       AutoScaleMode = AutoScaleMode.Font
       ClientSize = New Size(800, 450)
       Controls.Add(pnlChart)
-      Controls.Add(pnlTop)
+      Controls.Add(btnSetFocus)
+      btnSetFocus.BringToFront()
       Name = "frmTree"
       Text = "Family Tree"
-      pnlTop.ResumeLayout(False)
-      pnlTop.PerformLayout()
       ResumeLayout(False)
    End Sub
 
    Friend WithEvents pnlChart As ChartPanel
-   Friend WithEvents pnlTop As Panel
-   Friend WithEvents lblFocus As Label
-   Friend WithEvents cboFocus As ComboBox
+   Friend WithEvents btnSetFocus As Button
 End Class
