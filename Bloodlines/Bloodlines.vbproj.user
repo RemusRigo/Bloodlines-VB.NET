@@ -4,6 +4,9 @@
     <ActiveDebugFramework>net10.0-windows</ActiveDebugFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Update="Forms\frmBloodlines.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="Forms\frmListMembers.vb">
       <SubType>Form</SubType>
     </Compile>
