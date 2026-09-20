@@ -7,8 +7,8 @@
          Spouse
       End Enum
 
-      Public Property OtherId As Integer       ' who this points to
-      Public Property Type As RelationType     ' what OtherId is to me
+      Public Property RelativeID As Integer    ' who this points to
+      Public Property Type As RelationType     ' what RelativeID is to me
 
    End Class
 

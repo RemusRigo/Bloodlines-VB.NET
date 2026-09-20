@@ -111,7 +111,7 @@ Public Class frmTree
 
       For Each r As Relationship In p.Relationships.Where(Function(x) x.Type = Relationship.RelationType.Spouse)
          Dim spouse As Person = Nothing
-         If _byId.TryGetValue(r.OtherId, spouse) Then n.Spouses.Add(spouse)
+         If _byId.TryGetValue(r.RelativeID, spouse) Then n.Spouses.Add(spouse)
       Next
 
       If depth >= MaxDepth OrElse Not path.Add(p.ID) Then Return n
@@ -134,7 +134,7 @@ Public Class frmTree
             Where(Function(x) x.Type = Relationship.RelationType.Father OrElse x.Type = Relationship.RelationType.Mother).
             OrderBy(Function(x) x.Type)
          Dim parent As Person = Nothing
-         If _byId.TryGetValue(r.OtherId, parent) AndAlso added.Add(r.OtherId) Then
+         If _byId.TryGetValue(r.RelativeID, parent) AndAlso added.Add(r.RelativeID) Then
             n.Parents.Add(BuildUp(parent, depth + 1, path))
          End If
       Next
@@ -294,7 +294,12 @@ Public Class frmTree
       Dim busY As Integer = fromY + VGap \ 2
       g.DrawLine(pen, myCx, fromY, myCx, busY)
 
+      ' The bus line must span myCx too, not just the kids' own x-positions: an only
+      ' child who has a spouse gets their own box pushed off-centre within their
+      ' couple block (their spouse's box sits beside it), so xs.Min()/Max() alone
+      ' can land entirely to one side of myCx and leave a gap back to the parent.
       Dim xs = n.Kids.Select(Function(k) PrimaryCx(k)).ToList()
+      xs.Add(myCx)
       g.DrawLine(pen, xs.Min(), busY, xs.Max(), busY)
       For Each k As Node In n.Kids
          Dim kCx As Integer = PrimaryCx(k)
@@ -309,7 +314,10 @@ Public Class frmTree
       Dim busY As Integer = fromY - VGap \ 2
       g.DrawLine(pen, myCx, fromY, myCx, busY)
 
+      ' Same fix as DrawDownConnector: include myCx so a single parent whose own
+      ' box is off-centre (because they have a spouse) still connects back to n.
       Dim xs = n.Parents.Select(Function(p) PrimaryCx(p)).ToList()
+      xs.Add(myCx)
       g.DrawLine(pen, xs.Min(), busY, xs.Max(), busY)
       For Each p As Node In n.Parents
          Dim pCx As Integer = PrimaryCx(p)

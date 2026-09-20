@@ -10,7 +10,7 @@ Public Class frmBloodlines
    <DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)>
    Public Property jsonTreePath As String
 
-   Private lastForm As Form
+   Private lastForm As Control
 
    Dim lstTrees As ListBox = New ListBox()
 
@@ -85,6 +85,22 @@ Public Class frmBloodlines
          If frmChild IsNot Nothing Then
             frmChild.TopLevel = False
             frmChild.FormBorderStyle = FormBorderStyle.None
+            frmChild.Dock = DockStyle.Fill
+            frmChild.Tree = Me.Tree
+            pnlPlaceholder.Controls.Add(frmChild)
+            frmChild.Show()
+         End If
+         lastForm = frmChild
+      End If
+   End Sub
+
+   Private Sub tsBtnTreeNew_Click(sender As Object, e As EventArgs) Handles tsBtnTreeNew.Click
+      ClearPlaceholder()
+      If Tree Is Nothing Then
+         MessageBox.Show("No family tree loaded.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+      Else
+         Dim frmChild As New frmUCTree
+         If frmChild IsNot Nothing Then
             frmChild.Dock = DockStyle.Fill
             frmChild.Tree = Me.Tree
             pnlPlaceholder.Controls.Add(frmChild)

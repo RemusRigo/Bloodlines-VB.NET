@@ -15,7 +15,7 @@ Public Class frmListMembers
    Private Function NamesFor(ft As FamilyTree, p As Person, relType As Relationship.RelationType) As List(Of String)
       Return p.Relationships.
       Where(Function(r) r.Type = relType).
-      Select(Function(r) ft.People.FirstOrDefault(Function(x) x.ID = r.OtherId)).
+      Select(Function(r) ft.People.FirstOrDefault(Function(x) x.ID = r.RelativeID)).
       Where(Function(other) other IsNot Nothing).
       Select(Function(other) $"{other.FirstName} {other.LastName}".Trim()).
       ToList()

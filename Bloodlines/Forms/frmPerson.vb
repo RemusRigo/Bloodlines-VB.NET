@@ -21,8 +21,8 @@ Public Class frmPerson
       Public Property Relationship As Relationship
       Public Property Tree As FamilyTree
       Public Overrides Function ToString() As String
-         Dim other As Person = Tree.People.FirstOrDefault(Function(p) p.ID = Relationship.OtherId)
-         Dim n As String = If(other Is Nothing, "#" & Relationship.OtherId,
+         Dim other As Person = Tree.People.FirstOrDefault(Function(p) p.ID = Relationship.RelativeID)
+         Dim n As String = If(other Is Nothing, "#" & Relationship.RelativeID,
                            $"{other.FirstName} {other.LastName}".Trim())
          Return $"{Relationship.Type}: {n}"
       End Function
@@ -182,17 +182,17 @@ Public Class frmPerson
       Dim self As Person = Tree.People(currentID)
 
       ' no duplicates
-      If self.Relationships.Any(Function(r) r.OtherId = sel.Person.ID AndAlso r.Type = relType) Then
+      If self.Relationships.Any(Function(r) r.RelativeID = sel.Person.ID AndAlso r.Type = relType) Then
          MessageBox.Show("That connection already exists.")
          Return
       End If
 
-      self.Relationships.Add(New Relationship With {.OtherId = sel.Person.ID, .Type = relType})
+      self.Relationships.Add(New Relationship With {.RelativeID = sel.Person.ID, .Type = relType})
 
       ' keep spouse links symmetric
       If relType = Relationship.RelationType.Spouse Then
-         If Not sel.Person.Relationships.Any(Function(r) r.OtherId = self.ID AndAlso r.Type = Relationship.RelationType.Spouse) Then
-            sel.Person.Relationships.Add(New Relationship With {.OtherId = self.ID, .Type = Relationship.RelationType.Spouse})
+         If Not sel.Person.Relationships.Any(Function(r) r.RelativeID = self.ID AndAlso r.Type = Relationship.RelationType.Spouse) Then
+            sel.Person.Relationships.Add(New Relationship With {.RelativeID = self.ID, .Type = Relationship.RelationType.Spouse})
          End If
       End If
 
@@ -208,9 +208,9 @@ Public Class frmPerson
       self.Relationships.Remove(item.Relationship)
 
       If item.Relationship.Type = Relationship.RelationType.Spouse Then
-         Dim other As Person = Tree.People.FirstOrDefault(Function(p) p.ID = item.Relationship.OtherId)
+         Dim other As Person = Tree.People.FirstOrDefault(Function(p) p.ID = item.Relationship.RelativeID)
          If other IsNot Nothing Then
-            other.Relationships.RemoveAll(Function(r) r.OtherId = self.ID AndAlso r.Type = Relationship.RelationType.Spouse)
+            other.Relationships.RemoveAll(Function(r) r.RelativeID = self.ID AndAlso r.Type = Relationship.RelationType.Spouse)
          End If
       End If
 

@@ -37,6 +37,7 @@ Partial Class frmBloodlines
       tsBtnAddMember = New ToolStripButton()
       tsBtnViewMembers = New ToolStripButton()
       pnlPlaceholder = New Panel()
+      tsBtnTreeNew = New ToolStripButton()
       StatusStrip.SuspendLayout()
       ToolStrip.SuspendLayout()
       SuspendLayout()
@@ -56,7 +57,7 @@ Partial Class frmBloodlines
       ' 
       ' ToolStrip
       ' 
-      ToolStrip.Items.AddRange(New ToolStripItem() {tsBtnNew, tsBtnLoad, tsBtnSave, tsBtnSep1, tsBtnList, ToolStripSeparator1, tsBtnTree, ToolStripSeparator2, tsBtnAddMember, tsBtnViewMembers})
+      ToolStrip.Items.AddRange(New ToolStripItem() {tsBtnNew, tsBtnLoad, tsBtnSave, tsBtnSep1, tsBtnList, ToolStripSeparator1, tsBtnTree, tsBtnTreeNew, ToolStripSeparator2, tsBtnAddMember, tsBtnViewMembers})
       ToolStrip.Location = New Point(0, 0)
       ToolStrip.Name = "ToolStrip"
       ToolStrip.Size = New Size(800, 25)
@@ -151,9 +152,18 @@ Partial Class frmBloodlines
       pnlPlaceholder.Size = New Size(800, 403)
       pnlPlaceholder.TabIndex = 2
       ' 
+      ' tsBtnTreeNew
+      ' 
+      tsBtnTreeNew.DisplayStyle = ToolStripItemDisplayStyle.Image
+      tsBtnTreeNew.Image = CType(resources.GetObject("tsBtnTreeNew.Image"), Image)
+      tsBtnTreeNew.ImageTransparentColor = Color.Magenta
+      tsBtnTreeNew.Name = "tsBtnTreeNew"
+      tsBtnTreeNew.Size = New Size(23, 22)
+      tsBtnTreeNew.Text = "ToolStripButton2"
+      ' 
       ' frmBloodlines
       ' 
-      AutoScaleDimensions = New SizeF(7.0F, 15.0F)
+      AutoScaleDimensions = New SizeF(7F, 15F)
       AutoScaleMode = AutoScaleMode.Font
       ClientSize = New Size(800, 450)
       Controls.Add(pnlPlaceholder)
@@ -177,7 +187,7 @@ Partial Class frmBloodlines
    Friend WithEvents tsBtnList As ToolStripButton
    Friend WithEvents tsBtnLoad As ToolStripButton
    Friend WithEvents ToolStripSeparator1 As ToolStripSeparator
-   Friend WithEvents ToolStripButton1 As ToolStripButton
+   Friend WithEvents tsBtnTreeNew As ToolStripButton
    Friend WithEvents tsBtnSave As ToolStripButton
    Friend WithEvents tsBtnNew As ToolStripButton
    Friend WithEvents tsBtnTree As ToolStripButton

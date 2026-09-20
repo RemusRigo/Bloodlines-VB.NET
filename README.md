@@ -33,6 +33,9 @@ Just run Bloodlines.exe
 
 ## Roadmap
 
+* 2026-09-20: Fix: some connections not drawn
+* 2026-09-20: Fix: text not inside person panel
+* 2026-09-20: Add: User Control form for Tree
 * 2026-09-07: Add: User/Add User by [Md Tanvirul Haque](https://www.flaticon.com/authors/md-tanvirul-haque)
 * 2026-09-07: Add: [Save icon](https://www.flaticon.com/free-icon/save_5234222) by [Flat Icons](https://www.flaticon.com/authors/flat-icons)
 * 2026-09-07: Add: UI

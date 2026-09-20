@@ -46,7 +46,7 @@ Namespace Bloodlines
 
       ' A child is anyone who lists me as their Father or Mother
       Public Function GetChildren(personId As Integer) As List(Of Person)
-         Return People.Where(Function(p) p.Relationships.Any(Function(r) r.OtherId = personId AndAlso (r.Type = RelationType.Father OrElse r.Type = RelationType.Mother))).ToList()
+         Return People.Where(Function(p) p.Relationships.Any(Function(r) r.RelativeID = personId AndAlso (r.Type = RelationType.Father OrElse r.Type = RelationType.Mother))).ToList()
       End Function
 
       Public Sub Save()
