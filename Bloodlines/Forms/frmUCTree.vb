@@ -1,5 +1,6 @@
 Imports System.ComponentModel
 Imports System.Drawing.Drawing2D
+Imports System.IO
 Imports Bloodlines.Bloodlines
 
 ' Genealogy "hourglass" chart centred on one person, as an embeddable UserControl
@@ -18,13 +19,15 @@ Public Class frmUCTree
    Public Property Tree As FamilyTree
 
    ' --- layout constants (pixels, unscaled - i.e. measured at zoom = 1.0) ---
-   Private Const NodeWidth As Integer = 150     ' width of one person's box
-   Private Const NodeHeight As Integer = 52     ' height of one person's box
+   Private Const NodeWidth As Integer = 210     ' width of one person's card
+   Private Const NodeHeight As Integer = 84     ' height of one person's card
    Private Const HGap As Integer = 26           ' horizontal gap between sibling subtrees
    Private Const VGap As Integer = 46           ' vertical gap between generations
-   Private Const Margin As Integer = 24         ' padding around the whole layout
+   Private Const TreeMargin As Integer = 24         ' padding around the whole layout
    Private Const MaxDepth As Integer = 20       ' guard against pathological/cyclic data
    Private Const SpouseGap As Integer = 6       ' gap between a person and their spouse box(es)
+   Private Const CardPad As Integer = 6         ' padding inside a person card
+   Private Const PhotoWidth As Integer = 62     ' width of the photo on a card
 
    ' --- zoom/pan state ---
    ' The chart is drawn in its own unscaled "content" coordinate space (see LayoutNodes),
@@ -60,10 +63,26 @@ Public Class frmUCTree
    Private _nameFont As Font
    Private _dateFont As Font
    Private ReadOnly _tip As New ToolTip()
+   Private ReadOnly _photos As New Dictionary(Of Integer, Image)   ' person ID -> photo (Nothing = none)
+   Private ReadOnly _menuIcons As New Dictionary(Of String, Image) From {
+      {"Mother", MakeMenuIcon(Color.FromArgb(219, 112, 147), "M")},
+      {"Father", MakeMenuIcon(Color.FromArgb(70, 130, 220), "F")},
+      {"Child", MakeMenuIcon(Color.FromArgb(150, 150, 150), "C")},
+      {"Sibling", MakeMenuIcon(Color.FromArgb(150, 150, 150), "S")},
+      {"Spouse", MakeMenuIcon(Color.FromArgb(180, 140, 200), "♥")}
+   }
 
    ' Shared text layout: centred both ways, single line, ellipsis if the name/date
    ' string doesn't fit the box. Reused for every DrawString call to avoid
    ' allocating a new StringFormat per box per paint.
+   ' Card text: left-aligned, vertically centred in its line, single line with ellipsis.
+   Private ReadOnly _leftFormat As New StringFormat() With {
+      .Alignment = StringAlignment.Near,
+      .LineAlignment = StringAlignment.Center,
+      .Trimming = StringTrimming.EllipsisCharacter,
+      .FormatFlags = StringFormatFlags.NoWrap
+   }
+
    Private ReadOnly _centerFormat As New StringFormat() With {
       .Alignment = StringAlignment.Center,
       .LineAlignment = StringAlignment.Center,
@@ -74,8 +93,8 @@ Public Class frmUCTree
    ' ---------------------------------------------------------------- setup ---
 
    Private Sub frmUCTree_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-      _nameFont = New Font(Font, FontStyle.Bold)
-      _dateFont = New Font(Font.FontFamily, Math.Max(6.0F, Font.Size - 1.5F))
+      _nameFont = New Font(Font.FontFamily, Font.Size + 2.0F)
+      _dateFont = New Font(Font.FontFamily, Font.Size + 0.5F)
 
       If Tree Is Nothing OrElse Tree.People Is Nothing OrElse Tree.People.Count = 0 Then
          pnlChart.Invalidate()
@@ -102,6 +121,14 @@ Public Class frmUCTree
       If _dateFont IsNot Nothing Then _dateFont.Dispose()
       _tip.Dispose()
       _centerFormat.Dispose()
+      _leftFormat.Dispose()
+      For Each img As Image In _photos.Values
+         If img IsNot Nothing Then img.Dispose()
+      Next
+      _photos.Clear()
+      For Each img As Image In _menuIcons.Values
+         img.Dispose()
+      Next
    End Sub
 
    ' ---------------------------------------------------------------- model ---
@@ -189,7 +216,7 @@ Public Class frmUCTree
 
       ' The focus row's Y depends on how many ancestor generations sit above it.
       Dim maxAnc As Integer = MaxGen(_focus, parentsOf, 0, New HashSet(Of Node))
-      _focusTopY = Margin + maxAnc * (NodeHeight + VGap)
+      _focusTopY = TreeMargin + maxAnc * (NodeHeight + VGap)
 
       ' Second pass: assign actual X/Y to every node.
       PlaceDown(_focus, 0, 0)
@@ -205,9 +232,9 @@ Public Class frmUCTree
          Collect(p, parentsOf, seen, _allNodes)
       Next
 
-      ' Shift everything so the left-most box sits exactly Margin pixels from content X = 0.
+      ' Shift everything so the left-most box sits exactly TreeMargin pixels from content X = 0.
       Dim minLeft As Integer = _allNodes.Min(Function(n) n.Cx - CoupleWidth(n) \ 2)
-      Dim dx As Integer = Margin - minLeft
+      Dim dx As Integer = TreeMargin - minLeft
       For Each n As Node In _allNodes
          n.Cx += dx
       Next
@@ -268,14 +295,22 @@ Public Class frmUCTree
    End Sub
 
    ' Places descendants: node itself at (cx, generation row), then its kids spread
-   ' out beneath it, each centred over its own subtree width.
+   ' out beneath it, each centred over its own subtree width. The kids are centred on
+   ' PrimaryCx(node) - node's own box - not on cx/node.Cx, which is the centre of the
+   ' whole couple block once a spouse box is attached beside it. DrawDownConnector
+   ' converges on PrimaryCx(node) too, so centring the kids on node.Cx instead left the
+   ' whole child generation (and everything below it) shifted off to one side whenever
+   ' node had a spouse - most visible, but not limited to, the ancestor side (see
+   ' PlaceParents) with a lopsided family (e.g. one parent's own ancestors are known and
+   ' take up much more width than the other's).
    Private Sub PlaceDown(node As Node, cx As Integer, gen As Integer)
       node.Cx = cx
       node.Y = _focusTopY + gen * (NodeHeight + VGap)
       If node.Kids.Count = 0 Then Return
 
+      Dim primary As Integer = PrimaryCx(node)
       Dim total As Integer = node.Kids.Sum(Function(k) k.W) + HGap * (node.Kids.Count - 1)
-      Dim start As Integer = cx - total \ 2
+      Dim start As Integer = primary - total \ 2
       For Each k As Node In node.Kids
          PlaceDown(k, start + k.W \ 2, gen + 1)
          start += k.W + HGap
@@ -286,20 +321,22 @@ Public Class frmUCTree
    Private Sub PlaceUp(focus As Node)
       focus.Cx = 0
       focus.Y = _focusTopY
-      PlaceParents(focus, 0, 1)
+      PlaceParents(focus, 1)
    End Sub
 
-   ' Mirrors PlaceDown, but going upward (ancestors), one generation at a time.
-   Private Sub PlaceParents(node As Node, cx As Integer, gen As Integer)
+   ' Mirrors PlaceDown, but going upward (ancestors), one generation at a time. See the
+   ' comment on PlaceDown: parents are centred on PrimaryCx(node), not node.Cx.
+   Private Sub PlaceParents(node As Node, gen As Integer)
       If node.Parents.Count = 0 Then Return
 
+      Dim primary As Integer = PrimaryCx(node)
       Dim total As Integer = node.Parents.Sum(Function(p) p.W) + HGap * (node.Parents.Count - 1)
-      Dim start As Integer = cx - total \ 2
+      Dim start As Integer = primary - total \ 2
       For Each p As Node In node.Parents
          p.Cx = start + p.W \ 2
          p.Y = _focusTopY - gen * (NodeHeight + VGap)
          start += p.W + HGap
-         PlaceParents(p, p.Cx, gen + 1)
+         PlaceParents(p, gen + 1)
       Next
    End Sub
 
@@ -365,9 +402,21 @@ Public Class frmUCTree
    End Sub
 
    ' Left mouse button down starts a pan drag; also grabs keyboard focus for pnlChart
-   ' so +/- zoom keys work right after clicking into the chart.
+   ' so +/- zoom keys work right after clicking into the chart. Right button instead
+   ' primes pnlChart.ContextMenuStrip with a menu built for whoever's under the cursor,
+   ' then lets Windows' own native WM_CONTEXTMENU handling show it. Calling
+   ' ToolStripDropDown.Show(control, point) manually here instead reliably threw
+   ' ObjectDisposedException from inside WinForms' own auto-close handling as soon as an
+   ' item was clicked (reproducible regardless of whether the strip was disposed
+   ' ourselves) - assigning ContextMenuStrip and letting Windows show it natively avoids
+   ' that code path entirely.
    Private Sub pnlChart_MouseDown(sender As Object, e As MouseEventArgs) Handles pnlChart.MouseDown
       pnlChart.Focus()
+      If e.Button = MouseButtons.Right Then
+         Dim hit As Person = PersonAt(e.Location)
+         pnlChart.ContextMenuStrip = If(hit IsNot Nothing, BuildPersonMenu(hit), Nothing)
+         Return
+      End If
       If e.Button <> MouseButtons.Left Then Return
       _dragging = True
       _dragLast = e.Location
@@ -400,7 +449,7 @@ Public Class frmUCTree
 
       If _focus Is Nothing Then
          g.ResetTransform() ' draw this message in plain screen coordinates, unscaled
-         g.DrawString("Load a family tree, then pick a focus person.", Font, Brushes.Gray, Margin, Margin)
+         g.DrawString("Load a family tree, then pick a focus person.", Font, Brushes.Gray, TreeMargin, TreeMargin)
          Return
       End If
 
@@ -478,17 +527,18 @@ Public Class frmUCTree
       Next
    End Sub
 
-   ' Draws one person's box: fill colour by sex, border (bold+blue if this is the
-   ' focus person), name, and life span (birth-death years).
+   ' A person "card": photo on the left; first name, last name and (born - died) on the right.
+   ' The focus person gets a heavier blue outline.
    Private Sub DrawBox(g As Graphics, rect As Rectangle, person As Person, isFocus As Boolean)
+      ' background tint by sex (blue = male, pink = female, grey = not specified), fading lighter toward the top
       Dim fill As Color
-      Select Case If(person.Sex.HasValue, person.Sex.Value, Person.SexType.Unknown)
+      Select Case person.Sex
          Case Person.SexType.Male : fill = Color.FromArgb(219, 234, 254)
          Case Person.SexType.Female : fill = Color.FromArgb(252, 228, 236)
          Case Else : fill = Color.FromArgb(238, 238, 238)
       End Select
-
-      Using b As New SolidBrush(fill)
+      Dim fillTop As Color = Color.FromArgb((fill.R + 255) \ 2, (fill.G + 255) \ 2, (fill.B + 255) \ 2)
+      Using b As New LinearGradientBrush(rect, fillTop, fill, 90.0F)
          g.FillRectangle(b, rect)
       End Using
 
@@ -508,32 +558,88 @@ Public Class frmUCTree
          End Using
       End If
 
-      Dim name As String = $"{person.FirstName} {person.LastName}".Trim()
-      If name.Length = 0 Then name = "#" & person.ID
+      ' photo (scales with the chart, so its border pen does too)
+      Dim photoRect As New Rectangle(rect.X + CardPad, rect.Y + CardPad, PhotoWidth, rect.Height - 2 * CardPad)
+      DrawPhoto(g, photoRect, GetPhoto(person))
+      Using pen As New Pen(Color.FromArgb(86, 180, 239), 2)
+         g.DrawRectangle(pen, photoRect)
+      End Using
 
-      ' Text is drawn with Graphics.DrawString (true GDI+), not TextRenderer.DrawText
-      ' (which goes through native GDI and only honours a translation on the Graphics
-      ' object, not the ScaleTransform used for zoom - using it here would leave the
-      ' text fixed in place while the boxes pan/zoom underneath it).
-      Dim life As String = LifeSpan(person)
-      Dim nameArea As New RectangleF(rect.X + 4, rect.Y + 4, rect.Width - 8, rect.Height - 8 - If(life.Length > 0, 14, 0))
-      g.DrawString(name, _nameFont, Brushes.Black, nameArea, _centerFormat)
+      ' text: first name / last name / (born - died)
+      ' Drawn with Graphics.DrawString (true GDI+), not TextRenderer.DrawText, so the text follows
+      ' the zoom transform along with the boxes (TextRenderer only honours a translation).
+      Dim lines As New List(Of (Text As String, Font As Font, Brush As Brush))
+      If Not String.IsNullOrWhiteSpace(person.FirstName) Then lines.Add((person.FirstName.Trim(), _nameFont, Brushes.Black))
+      If Not String.IsNullOrWhiteSpace(person.LastName) Then lines.Add((person.LastName.Trim(), _nameFont, Brushes.Black))
+      If lines.Count = 0 Then lines.Add(("#" & person.ID, _nameFont, Brushes.Black))
+      Dim life As String = person.LifeSpan
+      If life.Length > 0 Then lines.Add((life, _dateFont, Brushes.DimGray))
 
-      If life.Length > 0 Then
-         Dim lifeArea As New RectangleF(rect.X + 4, rect.Bottom - 16, rect.Width - 8, 14)
-         Using lifeBrush As New SolidBrush(Color.FromArgb(90, 90, 90))
-            g.DrawString(life, _dateFont, lifeBrush, lifeArea, _centerFormat)
-         End Using
-      End If
+      Dim textX As Integer = photoRect.Right + CardPad + 2
+      Dim textW As Integer = rect.Right - CardPad - textX
+      Dim lineH As Integer = _nameFont.Height
+      Dim y As Integer = rect.Y + (rect.Height - lineH * lines.Count) \ 2
+      For Each ln In lines
+         g.DrawString(ln.Text, ln.Font, ln.Brush, New RectangleF(textX, y, textW, lineH), _leftFormat)
+         y += lineH
+      Next
    End Sub
 
-   ' "b. 1900" if only a birth year is known, "1900 - 1980" if both are, "" if neither.
-   Private Shared Function LifeSpan(p As Person) As String
-      Dim born As String = If(p.BirthDate.HasValue, p.BirthDate.Value.Year.ToString(), "")
-      Dim died As String = If(p.DeathDate.HasValue, p.DeathDate.Value.Year.ToString(), "")
-      If born.Length = 0 AndAlso died.Length = 0 Then Return ""
-      If died.Length = 0 Then Return "b. " & born
-      Return $"{born} – {died}"
+   ' Fills r with the photo (cropped to fit, biased toward the top so faces stay in), or a placeholder.
+   Private Shared Sub DrawPhoto(g As Graphics, r As Rectangle, img As Image)
+      If img Is Nothing Then
+         Using b As New SolidBrush(Color.FromArgb(214, 218, 224))
+            g.FillRectangle(b, r)
+         End Using
+         Dim oldClip As Region = g.Clip
+         g.SetClip(r)
+         Using b As New SolidBrush(Color.FromArgb(160, 168, 178))
+            Dim head As Integer = r.Width \ 2
+            g.FillEllipse(b, r.X + (r.Width - head) \ 2, r.Y + r.Height \ 5, head, head)
+            g.FillEllipse(b, r.X + r.Width \ 8, r.Y + r.Height \ 5 + head + 4, r.Width * 3 \ 4, r.Height)
+         End Using
+         g.Clip = oldClip
+         Return
+      End If
+
+      Dim scale As Double = Math.Max(r.Width / img.Width, r.Height / img.Height)
+      Dim sw As Integer = Math.Min(img.Width, CInt(r.Width / scale))
+      Dim sh As Integer = Math.Min(img.Height, CInt(r.Height / scale))
+      Dim src As New Rectangle((img.Width - sw) \ 2, (img.Height - sh) \ 4, sw, sh)
+      Dim oldMode As InterpolationMode = g.InterpolationMode
+      g.InterpolationMode = InterpolationMode.HighQualityBilinear
+      g.DrawImage(img, r, src, GraphicsUnit.Pixel)
+      g.InterpolationMode = oldMode
+   End Sub
+
+   ' Loads (once) the person's photo from <tree folder>\<tree name>\<ID>.png/jpg; Nothing if absent or unreadable.
+   Private Function GetPhoto(p As Person) As Image
+      Dim img As Image = Nothing
+      If _photos.TryGetValue(p.ID, img) Then Return img
+
+      Dim file As String = Tree.FindPhoto(p.ID)
+      If file IsNot Nothing Then
+         Try
+            Using fs As New FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read)
+               Using src As Image = Image.FromStream(fs)
+                  ' keep a downscaled copy: releases the file lock and makes repaints cheaper
+                  Dim h As Integer = Math.Min(src.Height, 240)
+                  Dim w As Integer = Math.Max(1, CInt(src.Width * (h / src.Height)))
+                  Dim bmp As New Bitmap(w, h)
+                  Using bg As Graphics = Graphics.FromImage(bmp)
+                     bg.InterpolationMode = InterpolationMode.HighQualityBicubic
+                     bg.DrawImage(src, 0, 0, w, h)
+                  End Using
+                  img = bmp
+               End Using
+            End Using
+         Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is ArgumentException OrElse TypeOf ex Is OutOfMemoryException
+            img = Nothing
+         End Try
+      End If
+
+      _photos(p.ID) = img
+      Return img
    End Function
 
    ' ---------------------------------------------------------- interaction ---
@@ -583,13 +689,118 @@ Public Class frmUCTree
       Return Nothing
    End Function
 
+   ' -------------------------------------------------------- context menu ---
+
+   ' Builds the right-click menu for one person. Not disposed by us: a short-lived,
+   ' per-right-click ContextMenuStrip is cheap enough to just leave for the GC/finalizer,
+   ' and there's no safe point in the click-handling flow to dispose it from ourselves
+   ' (see the note on pnlChart_MouseDown above).
+   Private Function BuildPersonMenu(p As Person) As ContextMenuStrip
+      Dim hasFather As Boolean = p.Relationships.Any(Function(r) r.Type = Relationship.RelationType.Father)
+      Dim hasMother As Boolean = p.Relationships.Any(Function(r) r.Type = Relationship.RelationType.Mother)
+
+      Dim menu As New ContextMenuStrip()
+      menu.Items.Add("Add Mother", _menuIcons("Mother"), Sub() RunDeferred(Sub() AddMother(p))).Enabled = Not hasMother
+      menu.Items.Add("Add Father", _menuIcons("Father"), Sub() RunDeferred(Sub() AddFather(p))).Enabled = Not hasFather
+      menu.Items.Add("Add Child", _menuIcons("Child"), Sub() RunDeferred(Sub() AddChild(p)))
+      menu.Items.Add("Add Sibling", _menuIcons("Sibling"), Sub() RunDeferred(Sub() AddSibling(p)))
+      menu.Items.Add("Add Spouse", _menuIcons("Spouse"), Sub() RunDeferred(Sub() AddSpouse(p)))
+      Return menu
+   End Function
+
+   ' Runs `action` on the next message-loop tick instead of directly inside a menu item's
+   ' Click handler. AddRelative (used by every action here) opens a modal frmPerson
+   ' dialog; deferring keeps that out of the ContextMenuStrip's own click/close handling.
+   Private Sub RunDeferred(action As Action)
+      pnlChart.BeginInvoke(action)
+   End Sub
+
+   ' A small flat circular badge (16x16) for a context-menu item: a solid colour fill
+   ' with a single glyph in the middle. Built once and cached in _menuIcons.
+   Private Shared Function MakeMenuIcon(fill As Color, glyph As String) As Bitmap
+      Dim bmp As New Bitmap(16, 16)
+      Using g As Graphics = Graphics.FromImage(bmp)
+         g.SmoothingMode = SmoothingMode.AntiAlias
+         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit
+         Using b As New SolidBrush(fill)
+            g.FillEllipse(b, 0, 0, 15, 15)
+         End Using
+         Using f As New Font("Segoe UI", 8.0F, FontStyle.Bold)
+            Dim sz As SizeF = g.MeasureString(glyph, f)
+            g.DrawString(glyph, f, Brushes.White, (16 - sz.Width) / 2, (16 - sz.Height) / 2)
+         End Using
+      End Using
+      Return bmp
+   End Function
+
+   Private Sub AddMother(p As Person)
+      AddRelative(p, Sub(np) p.Relationships.Add(New Relationship With {.RelativeID = np.ID, .Type = Relationship.RelationType.Mother}))
+   End Sub
+
+   Private Sub AddFather(p As Person)
+      AddRelative(p, Sub(np) p.Relationships.Add(New Relationship With {.RelativeID = np.ID, .Type = Relationship.RelationType.Father}))
+   End Sub
+
+   Private Sub AddSpouse(p As Person)
+      AddRelative(p, Sub(np)
+                        p.Relationships.Add(New Relationship With {.RelativeID = np.ID, .Type = Relationship.RelationType.Spouse})
+                        np.Relationships.Add(New Relationship With {.RelativeID = p.ID, .Type = Relationship.RelationType.Spouse})
+                     End Sub)
+   End Sub
+
+   Private Sub AddChild(p As Person)
+      If Not p.Sex.HasValue Then
+         MessageBox.Show("Set this person's sex first, so the new child can be linked as theirs (Father or Mother).",
+                          "Add Child", MessageBoxButtons.OK, MessageBoxIcon.Information)
+         Return
+      End If
+      Dim relType As Relationship.RelationType = If(p.Sex.Value = Person.SexType.Male, Relationship.RelationType.Father, Relationship.RelationType.Mother)
+      AddRelative(p, Sub(np) np.Relationships.Add(New Relationship With {.RelativeID = p.ID, .Type = relType}))
+   End Sub
+
+   Private Sub AddSibling(p As Person)
+      Dim parents As List(Of Relationship) = p.Relationships.
+         Where(Function(r) r.Type = Relationship.RelationType.Father OrElse r.Type = Relationship.RelationType.Mother).ToList()
+      If parents.Count = 0 Then
+         MessageBox.Show("Add this person's mother or father first, so the sibling has a parent to share.",
+                          "Add Sibling", MessageBoxButtons.OK, MessageBoxIcon.Information)
+         Return
+      End If
+      AddRelative(p, Sub(np)
+                        For Each r As Relationship In parents
+                           np.Relationships.Add(New Relationship With {.RelativeID = r.RelativeID, .Type = r.Type})
+                        Next
+                     End Sub)
+   End Sub
+
+   ' Creates a blank person, wires up `link` (their relationship to `anchor`), saves,
+   ' then opens frmPerson on the new person so its details can be filled in.
+   Private Sub AddRelative(anchor As Person, link As Action(Of Person))
+      Dim np As New Person With {.ID = Tree.NextID()}
+      link(np)
+      Tree.People.Add(np)
+      Tree.Save()
+
+      frmPerson.Tree = Tree
+      frmPerson.FocusID = np.ID
+      frmPerson.ShowDialog(Me)
+
+      ' the new person (and anyone added via frmPerson's own Connections list while
+      ' it was open) needs to be in _byId before the chart can draw links to them
+      _byId.Clear()
+      For Each person As Person In Tree.People
+         _byId(person.ID) = person
+      Next
+      SetFocus(anchor)
+   End Sub
+
    ' Builds the multi-line tooltip text shown on hover.
    Private Shared Function DescribePerson(p As Person) As String
       Dim lines As New List(Of String) From {
          $"{p.FirstName} {p.LastName}".Trim(),
          "ID: " & p.ID
       }
-      If p.Sex.HasValue AndAlso p.Sex.Value <> Person.SexType.Unknown Then lines.Add("Sex: " & p.Sex.Value.ToString())
+      If p.Sex.HasValue Then lines.Add("Sex: " & p.Sex.Value.ToString())
       If p.BirthDate.HasValue Then lines.Add("Born: " & p.BirthDate.Value.ToString("yyyy-MM-dd"))
       If p.DeathDate.HasValue Then lines.Add("Died: " & p.DeathDate.Value.ToString("yyyy-MM-dd"))
       If Not String.IsNullOrWhiteSpace(p.Notes) Then

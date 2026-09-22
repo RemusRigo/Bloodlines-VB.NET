@@ -1,4 +1,5 @@
 Imports System.ComponentModel
+Imports System.IO
 Imports Bloodlines.Bloodlines
 
 Public Class frmPerson
@@ -6,6 +7,8 @@ Public Class frmPerson
    Friend Property Tree As FamilyTree
    <DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)>
    Friend Property newID As Boolean
+   <DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)>
+   Friend Property FocusID As Integer = -1
    Private currentID As Integer = -1
 
    Private NotInheritable Class PersonItem
@@ -35,7 +38,10 @@ Public Class frmPerson
          txtBoxID.Text = Tree.NextID().ToString()
          txtBoxFirstName.Clear()
          txtBoxLastName.Clear()
-         cbSex.SelectedItem = Person.SexType.Unknown
+         txtBoxBirthName.Clear()
+         txtBoxBirthPlace.Clear()
+         txtBoxDeathPlace.Clear()
+         cbSex.SelectedIndex = 0
          chkBoxBirthDate.Checked = False
          chkBoxDeathDate.Checked = False
          dtPickerBirthDate.Enabled = False
@@ -47,7 +53,10 @@ Public Class frmPerson
          txtBoxID.Text = p.ID.ToString()
          txtBoxFirstName.Text = p.FirstName
          txtBoxLastName.Text = p.LastName
-         cbSex.SelectedItem = If(p.Sex.HasValue, p.Sex.Value, Person.SexType.Unknown)
+         txtBoxBirthName.Text = p.BirthName
+         txtBoxBirthPlace.Text = p.BirthPlace
+         txtBoxDeathPlace.Text = p.DeathPlace
+         cbSex.SelectedIndex = If(p.Sex.HasValue, cbSex.Items.IndexOf(p.Sex.Value), 0)
 
          chkBoxBirthDate.Checked = p.BirthDate.HasValue
          If p.BirthDate.HasValue Then dtPickerBirthDate.Value = p.BirthDate.Value
@@ -59,6 +68,8 @@ Public Class frmPerson
 
          txtBoxNotes.Text = p.Notes
       End If
+
+      LoadPhoto(If(currentID >= 0, Tree.People(currentID).ID, Tree.NextID()))
 
       ' Prev ID / Next ID
       Dim hasPeople As Boolean = Tree.People.Count > 0
@@ -73,7 +84,14 @@ Public Class frmPerson
    Private Sub ApplyTo(p As Person)
       p.FirstName = txtBoxFirstName.Text
       p.LastName = txtBoxLastName.Text
-      p.Sex = CType(cbSex.SelectedItem, Person.SexType)
+      p.BirthName = txtBoxBirthName.Text
+      p.BirthPlace = txtBoxBirthPlace.Text
+      p.DeathPlace = txtBoxDeathPlace.Text
+      If TypeOf cbSex.SelectedItem Is Person.SexType Then
+         p.Sex = CType(cbSex.SelectedItem, Person.SexType)
+      Else
+         p.Sex = Nothing
+      End If
       p.BirthDate = If(chkBoxBirthDate.Checked, CType(dtPickerBirthDate.Value, Date?), Nothing)
       p.DeathDate = If(chkBoxDeathDate.Checked, CType(dtPickerDeathDate.Value, Date?), Nothing)
       p.Notes = txtBoxNotes.Text
@@ -121,18 +139,77 @@ Public Class frmPerson
    Private Sub frmPerson_Load(sender As Object, e As EventArgs) Handles MyBase.Load
       txtBoxID.Text = Tree.NextID().ToString()
 
-      cbSex.DataSource = [Enum].GetValues(GetType(Person.SexType))
+      cbSex.Items.Clear()
+      cbSex.Items.Add("")                          ' index 0 = not specified (Nothing)
+      For Each st As Person.SexType In [Enum].GetValues(GetType(Person.SexType))
+         cbSex.Items.Add(st)
+      Next
 
       cbRelation.DataSource = [Enum].GetValues(GetType(Relationship.RelationType))
       If cbRelation.Items.Count > 0 Then cbRelation.SelectedIndex = 0
 
-      If newID OrElse Tree.People.Count = 0 Then
+      picBoxProfile.SizeMode = PictureBoxSizeMode.Zoom
+      picBoxProfile.Cursor = Cursors.Hand
+
+      If FocusID >= 0 Then
+         ShowPerson(Tree.People.FindIndex(Function(x) x.ID = FocusID))
+      ElseIf newID OrElse Tree.People.Count = 0 Then
          ShowPerson(-1)
       Else
          ShowPerson(0)
       End If
    End Sub
 
+
+   Private Sub frmPerson_FormClosed(sender As Object, e As FormClosedEventArgs) Handles MyBase.FormClosed
+      If picBoxProfile.Image IsNot Nothing Then picBoxProfile.Image.Dispose()
+      picBoxProfile.Image = Nothing
+      FocusID = -1
+   End Sub
+
+   ' Shows <Trees>\<tree name>\<ID>.png (or any other photo format) in picBoxProfile, or clears it.
+   Private Sub LoadPhoto(id As Integer)
+      Dim old As Image = picBoxProfile.Image
+      picBoxProfile.Image = Nothing
+      If old IsNot Nothing Then old.Dispose()
+
+      Dim file As String = Tree.FindPhoto(id)
+      If file Is Nothing Then Return
+      Try
+         Using fs As New FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read)
+            Using src As Image = Image.FromStream(fs)
+               picBoxProfile.Image = New Bitmap(src)      ' a copy, so the file isn't locked
+            End Using
+         End Using
+      Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is ArgumentException OrElse TypeOf ex Is OutOfMemoryException
+         picBoxProfile.Image = Nothing
+      End Try
+   End Sub
+
+   Private Sub picBoxProfile_DoubleClick(sender As Object, e As EventArgs) Handles picBoxProfile.DoubleClick
+      If Not CommitCurrent() Then Return           ' make sure this person exists & is saved
+      If currentID < 0 Then
+         MessageBox.Show("Enter at least a name first so the person can be saved.")
+         Return
+      End If
+
+      Using dlg As New OpenFileDialog With {
+            .Title = "Choose a profile picture",
+            .Filter = "Images (*.jpg;*.jpeg;*.png;*.bmp;*.gif)|*.jpg;*.jpeg;*.png;*.bmp;*.gif|All files (*.*)|*.*"}
+         If dlg.ShowDialog(Me) <> DialogResult.OK Then Return
+
+         Dim id As Integer = Tree.People(currentID).ID
+         Try
+            Tree.SavePhoto(id, dlg.FileName)
+         Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is ArgumentException OrElse
+                                    TypeOf ex Is OutOfMemoryException OrElse TypeOf ex Is UnauthorizedAccessException OrElse
+                                    TypeOf ex Is System.Runtime.InteropServices.ExternalException
+            MessageBox.Show("Could not save the picture: " & ex.Message, "Profile picture", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+         End Try
+         LoadPhoto(id)
+      End Using
+   End Sub
 
    Private Sub chkBoxBirthDate_CheckedChanged(sender As Object, e As EventArgs) Handles chkBoxBirthDate.CheckedChanged
       dtPickerBirthDate.Enabled = chkBoxBirthDate.Checked
@@ -154,6 +231,11 @@ Public Class frmPerson
       If Tree.People.Count = 0 Then Return
       Dim i As Integer = If(currentID >= Tree.People.Count - 1, 0, currentID + 1)
       ShowPerson(i)
+   End Sub
+
+   Private Sub btnAdd_Click(sender As Object, e As EventArgs) Handles btnAdd.Click
+      If Not CommitCurrent() Then Return   ' save/keep whatever's on screen first
+      ShowPerson(-1)                       ' blank form, ready for a new person
    End Sub
 
    Private Sub btnOk_Click(sender As Object, e As EventArgs) Handles btnOk.Click

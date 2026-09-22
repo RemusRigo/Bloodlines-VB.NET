@@ -31,9 +31,9 @@ Public Class frmListMembers
          item.SubItems.Add(p.LastName)
 
          Select Case p.Sex
-            Case 0 : item.SubItems.Add("?")
-            Case 1 : item.SubItems.Add("M")
-            Case 2 : item.SubItems.Add("F")
+            Case Person.SexType.Male : item.SubItems.Add("M")
+            Case Person.SexType.Female : item.SubItems.Add("F")
+            Case Else : item.SubItems.Add("?")
          End Select
 
          If p.BirthDate.HasValue Then

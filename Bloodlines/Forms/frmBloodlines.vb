@@ -76,25 +76,25 @@ Public Class frmBloodlines
       End If
    End Sub
 
-   Private Sub tsBtnTree_Click(sender As Object, e As EventArgs) Handles tsBtnTree.Click
-      ClearPlaceholder()
-      If Tree Is Nothing Then
-         MessageBox.Show("No family tree loaded.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-      Else
-         Dim frmChild As New frmTree
-         If frmChild IsNot Nothing Then
-            frmChild.TopLevel = False
-            frmChild.FormBorderStyle = FormBorderStyle.None
-            frmChild.Dock = DockStyle.Fill
-            frmChild.Tree = Me.Tree
-            pnlPlaceholder.Controls.Add(frmChild)
-            frmChild.Show()
-         End If
-         lastForm = frmChild
-      End If
-   End Sub
+   'Private Sub tsBtnTree_Click(sender As Object, e As EventArgs)
+   '   ClearPlaceholder()
+   '   If Tree Is Nothing Then
+   '      MessageBox.Show("No family tree loaded.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+   '   Else
+   '      Dim frmChild As New frmTree
+   '      If frmChild IsNot Nothing Then
+   '         frmChild.TopLevel = False
+   '         frmChild.FormBorderStyle = FormBorderStyle.None
+   '         frmChild.Dock = DockStyle.Fill
+   '         frmChild.Tree = Tree
+   '         pnlPlaceholder.Controls.Add(frmChild)
+   '         frmChild.Show
+   '      End If
+   '      lastForm = frmChild
+   '   End If
+   'End Sub
 
-   Private Sub tsBtnTreeNew_Click(sender As Object, e As EventArgs) Handles tsBtnTreeNew.Click
+   Private Sub tsBtnTree_Click(sender As Object, e As EventArgs) Handles tsBtnTree.Click
       ClearPlaceholder()
       If Tree Is Nothing Then
          MessageBox.Show("No family tree loaded.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
@@ -110,15 +110,18 @@ Public Class frmBloodlines
       End If
    End Sub
 
-   Private Sub tsBtnAddMember_Click(sender As Object, e As EventArgs) Handles tsBtnAddMember.Click
-      ClearPlaceholder()
-      frmPerson.Tree = Tree
-      frmPerson.newID = True
-      frmPerson.ShowDialog()
-   End Sub
+   'Private Sub tsBtnAddMember_Click(sender As Object, e As EventArgs)
+   '   ClearPlaceholder()
+   '   If Tree Is Nothing Then
+   '      MessageBox.Show("No family tree loaded.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+   '   Else
+   '      frmPerson.Tree = Tree
+   '      frmPerson.newID = True
+   '      frmPerson.ShowDialog()
+   '   End If
+   'End Sub
 
-   Private Sub tsBtnViewMembers_Click(sender As Object, e As EventArgs) Handles tsBtnViewMembers.Click
-      ClearPlaceholder()
+   Private Sub tsBtnMembers_Click(sender As Object, e As EventArgs) Handles tsBtnMembers.Click
       frmPerson.Tree = Tree
       frmPerson.newID = False
       frmPerson.ShowDialog()

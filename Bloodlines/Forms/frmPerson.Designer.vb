@@ -22,6 +22,7 @@ Partial Class frmPerson
    'Do not modify it using the code editor.
    <System.Diagnostics.DebuggerStepThrough()> _
    Private Sub InitializeComponent()
+      Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(frmPerson))
       btnOk = New Button()
       lblID = New Label()
       txtBoxID = New TextBox()
@@ -48,6 +49,13 @@ Partial Class frmPerson
       lblRelation = New Label()
       btnPrev = New Button()
       btnNext = New Button()
+      txtBoxBirthName = New TextBox()
+      lblBirthName = New Label()
+      txtBoxBirthPlace = New TextBox()
+      lblBirthPlace = New Label()
+      txtBoxDeathPlace = New TextBox()
+      lblDeathPlace = New Label()
+      btnAdd = New Button()
       grpBoxNotes.SuspendLayout()
       CType(picBoxProfile, ComponentModel.ISupportInitialize).BeginInit()
       grpBoxConnections.SuspendLayout()
@@ -118,7 +126,7 @@ Partial Class frmPerson
       ' lblSex
       ' 
       lblSex.AutoSize = True
-      lblSex.Location = New Point(12, 90)
+      lblSex.Location = New Point(12, 121)
       lblSex.Name = "lblSex"
       lblSex.Size = New Size(27, 15)
       lblSex.TabIndex = 7
@@ -127,7 +135,7 @@ Partial Class frmPerson
       ' cbSex
       ' 
       cbSex.FormattingEnabled = True
-      cbSex.Location = New Point(98, 87)
+      cbSex.Location = New Point(98, 118)
       cbSex.Name = "cbSex"
       cbSex.Size = New Size(121, 23)
       cbSex.TabIndex = 9
@@ -156,6 +164,7 @@ Partial Class frmPerson
       ' picBoxProfile
       ' 
       picBoxProfile.Anchor = AnchorStyles.Top Or AnchorStyles.Right
+      picBoxProfile.BorderStyle = BorderStyle.FixedSingle
       picBoxProfile.Location = New Point(830, 6)
       picBoxProfile.Name = "picBoxProfile"
       picBoxProfile.Size = New Size(300, 400)
@@ -165,7 +174,7 @@ Partial Class frmPerson
       ' dtPickerBirthDate
       ' 
       dtPickerBirthDate.Format = DateTimePickerFormat.Short
-      dtPickerBirthDate.Location = New Point(98, 112)
+      dtPickerBirthDate.Location = New Point(98, 143)
       dtPickerBirthDate.Name = "dtPickerBirthDate"
       dtPickerBirthDate.Size = New Size(121, 23)
       dtPickerBirthDate.TabIndex = 16
@@ -173,7 +182,7 @@ Partial Class frmPerson
       ' dtPickerDeathDate
       ' 
       dtPickerDeathDate.Format = DateTimePickerFormat.Short
-      dtPickerDeathDate.Location = New Point(98, 139)
+      dtPickerDeathDate.Location = New Point(98, 201)
       dtPickerDeathDate.Name = "dtPickerDeathDate"
       dtPickerDeathDate.Size = New Size(121, 23)
       dtPickerDeathDate.TabIndex = 17
@@ -181,7 +190,7 @@ Partial Class frmPerson
       ' chkBoxDeathDate
       ' 
       chkBoxDeathDate.AutoSize = True
-      chkBoxDeathDate.Location = New Point(12, 143)
+      chkBoxDeathDate.Location = New Point(12, 205)
       chkBoxDeathDate.Name = "chkBoxDeathDate"
       chkBoxDeathDate.Size = New Size(84, 19)
       chkBoxDeathDate.TabIndex = 18
@@ -191,7 +200,7 @@ Partial Class frmPerson
       ' chkBoxBirthDate
       ' 
       chkBoxBirthDate.AutoSize = True
-      chkBoxBirthDate.Location = New Point(12, 117)
+      chkBoxBirthDate.Location = New Point(12, 148)
       chkBoxBirthDate.Name = "chkBoxBirthDate"
       chkBoxBirthDate.Size = New Size(78, 19)
       chkBoxBirthDate.TabIndex = 19
@@ -279,28 +288,96 @@ Partial Class frmPerson
       ' btnPrev
       ' 
       btnPrev.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
-      btnPrev.Location = New Point(12, 409)
+      btnPrev.Image = CType(resources.GetObject("btnPrev.Image"), Image)
+      btnPrev.Location = New Point(5, 402)
       btnPrev.Name = "btnPrev"
-      btnPrev.Size = New Size(23, 23)
+      btnPrev.Size = New Size(26, 26)
       btnPrev.TabIndex = 21
-      btnPrev.Text = "&<"
       btnPrev.UseVisualStyleBackColor = True
       ' 
       ' btnNext
       ' 
       btnNext.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
-      btnNext.Location = New Point(41, 409)
+      btnNext.Image = CType(resources.GetObject("btnNext.Image"), Image)
+      btnNext.Location = New Point(69, 402)
       btnNext.Name = "btnNext"
-      btnNext.Size = New Size(23, 23)
+      btnNext.Size = New Size(26, 26)
       btnNext.TabIndex = 22
-      btnNext.Text = "&>"
       btnNext.UseVisualStyleBackColor = True
+      ' 
+      ' txtBoxBirthName
+      ' 
+      txtBoxBirthName.Location = New Point(98, 89)
+      txtBoxBirthName.Name = "txtBoxBirthName"
+      txtBoxBirthName.PlaceholderText = "Birth Name"
+      txtBoxBirthName.Size = New Size(121, 23)
+      txtBoxBirthName.TabIndex = 24
+      ' 
+      ' lblBirthName
+      ' 
+      lblBirthName.AutoSize = True
+      lblBirthName.Location = New Point(12, 92)
+      lblBirthName.Name = "lblBirthName"
+      lblBirthName.Size = New Size(70, 15)
+      lblBirthName.TabIndex = 23
+      lblBirthName.Text = "Birth Name:"
+      ' 
+      ' txtBoxBirthPlace
+      ' 
+      txtBoxBirthPlace.Location = New Point(98, 172)
+      txtBoxBirthPlace.Name = "txtBoxBirthPlace"
+      txtBoxBirthPlace.PlaceholderText = "Birth Place"
+      txtBoxBirthPlace.Size = New Size(121, 23)
+      txtBoxBirthPlace.TabIndex = 26
+      ' 
+      ' lblBirthPlace
+      ' 
+      lblBirthPlace.AutoSize = True
+      lblBirthPlace.Location = New Point(12, 175)
+      lblBirthPlace.Name = "lblBirthPlace"
+      lblBirthPlace.Size = New Size(66, 15)
+      lblBirthPlace.TabIndex = 25
+      lblBirthPlace.Text = "Birth Place:"
+      ' 
+      ' txtBoxDeathPlace
+      ' 
+      txtBoxDeathPlace.Location = New Point(98, 230)
+      txtBoxDeathPlace.Name = "txtBoxDeathPlace"
+      txtBoxDeathPlace.PlaceholderText = "Death Place"
+      txtBoxDeathPlace.Size = New Size(121, 23)
+      txtBoxDeathPlace.TabIndex = 28
+      ' 
+      ' lblDeathPlace
+      ' 
+      lblDeathPlace.AutoSize = True
+      lblDeathPlace.Location = New Point(12, 233)
+      lblDeathPlace.Name = "lblDeathPlace"
+      lblDeathPlace.Size = New Size(72, 15)
+      lblDeathPlace.TabIndex = 27
+      lblDeathPlace.Text = "Death Place:"
+      ' 
+      ' btnAdd
+      ' 
+      btnAdd.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
+      btnAdd.Image = CType(resources.GetObject("btnAdd.Image"), Image)
+      btnAdd.Location = New Point(37, 402)
+      btnAdd.Name = "btnAdd"
+      btnAdd.Size = New Size(26, 26)
+      btnAdd.TabIndex = 29
+      btnAdd.UseVisualStyleBackColor = True
       ' 
       ' frmPerson
       ' 
       AutoScaleDimensions = New SizeF(7F, 15F)
       AutoScaleMode = AutoScaleMode.Font
       ClientSize = New Size(1135, 435)
+      Controls.Add(btnAdd)
+      Controls.Add(txtBoxDeathPlace)
+      Controls.Add(lblDeathPlace)
+      Controls.Add(txtBoxBirthPlace)
+      Controls.Add(lblBirthPlace)
+      Controls.Add(txtBoxBirthName)
+      Controls.Add(lblBirthName)
       Controls.Add(btnNext)
       Controls.Add(btnPrev)
       Controls.Add(grpBoxConnections)
@@ -356,4 +433,11 @@ Partial Class frmPerson
    Friend WithEvents lstBoxConnections As ListBox
    Friend WithEvents btnRemoveConection As Button
    Friend WithEvents btnAddConection As Button
+   Friend WithEvents txtBoxBirthName As TextBox
+   Friend WithEvents lblBirthName As Label
+   Friend WithEvents txtBoxBirthPlace As TextBox
+   Friend WithEvents lblBirthPlace As Label
+   Friend WithEvents txtBoxDeathPlace As TextBox
+   Friend WithEvents lblDeathPlace As Label
+   Friend WithEvents btnAdd As Button
 End Class

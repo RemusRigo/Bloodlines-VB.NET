@@ -31,13 +31,9 @@ Partial Class frmBloodlines
       tsBtnSave = New ToolStripButton()
       tsBtnSep1 = New ToolStripSeparator()
       tsBtnList = New ToolStripButton()
-      ToolStripSeparator1 = New ToolStripSeparator()
       tsBtnTree = New ToolStripButton()
-      ToolStripSeparator2 = New ToolStripSeparator()
-      tsBtnAddMember = New ToolStripButton()
-      tsBtnViewMembers = New ToolStripButton()
+      tsBtnMembers = New ToolStripButton()
       pnlPlaceholder = New Panel()
-      tsBtnTreeNew = New ToolStripButton()
       StatusStrip.SuspendLayout()
       ToolStrip.SuspendLayout()
       SuspendLayout()
@@ -57,7 +53,7 @@ Partial Class frmBloodlines
       ' 
       ' ToolStrip
       ' 
-      ToolStrip.Items.AddRange(New ToolStripItem() {tsBtnNew, tsBtnLoad, tsBtnSave, tsBtnSep1, tsBtnList, ToolStripSeparator1, tsBtnTree, tsBtnTreeNew, ToolStripSeparator2, tsBtnAddMember, tsBtnViewMembers})
+      ToolStrip.Items.AddRange(New ToolStripItem() {tsBtnNew, tsBtnLoad, tsBtnSave, tsBtnSep1, tsBtnMembers, tsBtnList, tsBtnTree})
       ToolStrip.Location = New Point(0, 0)
       ToolStrip.Name = "ToolStrip"
       ToolStrip.Size = New Size(800, 25)
@@ -106,11 +102,6 @@ Partial Class frmBloodlines
       tsBtnList.Size = New Size(23, 22)
       tsBtnList.Text = "List contacts"
       ' 
-      ' ToolStripSeparator1
-      ' 
-      ToolStripSeparator1.Name = "ToolStripSeparator1"
-      ToolStripSeparator1.Size = New Size(6, 25)
-      ' 
       ' tsBtnTree
       ' 
       tsBtnTree.DisplayStyle = ToolStripItemDisplayStyle.Image
@@ -120,28 +111,14 @@ Partial Class frmBloodlines
       tsBtnTree.Size = New Size(23, 22)
       tsBtnTree.Text = "ToolStripButton2"
       ' 
-      ' ToolStripSeparator2
+      ' tsBtnMembers
       ' 
-      ToolStripSeparator2.Name = "ToolStripSeparator2"
-      ToolStripSeparator2.Size = New Size(6, 25)
-      ' 
-      ' tsBtnAddMember
-      ' 
-      tsBtnAddMember.DisplayStyle = ToolStripItemDisplayStyle.Image
-      tsBtnAddMember.Image = CType(resources.GetObject("tsBtnAddMember.Image"), Image)
-      tsBtnAddMember.ImageTransparentColor = Color.Magenta
-      tsBtnAddMember.Name = "tsBtnAddMember"
-      tsBtnAddMember.Size = New Size(23, 22)
-      tsBtnAddMember.Text = "Add Member"
-      ' 
-      ' tsBtnViewMembers
-      ' 
-      tsBtnViewMembers.DisplayStyle = ToolStripItemDisplayStyle.Image
-      tsBtnViewMembers.Image = CType(resources.GetObject("tsBtnViewMembers.Image"), Image)
-      tsBtnViewMembers.ImageTransparentColor = Color.Magenta
-      tsBtnViewMembers.Name = "tsBtnViewMembers"
-      tsBtnViewMembers.Size = New Size(23, 22)
-      tsBtnViewMembers.Text = "View Members"
+      tsBtnMembers.DisplayStyle = ToolStripItemDisplayStyle.Image
+      tsBtnMembers.Image = CType(resources.GetObject("tsBtnMembers.Image"), Image)
+      tsBtnMembers.ImageTransparentColor = Color.Magenta
+      tsBtnMembers.Name = "tsBtnMembers"
+      tsBtnMembers.Size = New Size(23, 22)
+      tsBtnMembers.Text = "View Members"
       ' 
       ' pnlPlaceholder
       ' 
@@ -151,15 +128,6 @@ Partial Class frmBloodlines
       pnlPlaceholder.Name = "pnlPlaceholder"
       pnlPlaceholder.Size = New Size(800, 403)
       pnlPlaceholder.TabIndex = 2
-      ' 
-      ' tsBtnTreeNew
-      ' 
-      tsBtnTreeNew.DisplayStyle = ToolStripItemDisplayStyle.Image
-      tsBtnTreeNew.Image = CType(resources.GetObject("tsBtnTreeNew.Image"), Image)
-      tsBtnTreeNew.ImageTransparentColor = Color.Magenta
-      tsBtnTreeNew.Name = "tsBtnTreeNew"
-      tsBtnTreeNew.Size = New Size(23, 22)
-      tsBtnTreeNew.Text = "ToolStripButton2"
       ' 
       ' frmBloodlines
       ' 
@@ -181,18 +149,14 @@ Partial Class frmBloodlines
 
    Friend WithEvents StatusStrip As StatusStrip
    Friend WithEvents ToolStrip As ToolStrip
-   Friend WithEvents tsBtnViewMembers As ToolStripButton
+   Friend WithEvents tsBtnMembers As ToolStripButton
    Friend WithEvents pnlPlaceholder As Panel
    Friend WithEvents tsBtnSep1 As ToolStripSeparator
    Friend WithEvents tsBtnList As ToolStripButton
    Friend WithEvents tsBtnLoad As ToolStripButton
-   Friend WithEvents ToolStripSeparator1 As ToolStripSeparator
-   Friend WithEvents tsBtnTreeNew As ToolStripButton
+   Friend WithEvents tsBtnTree As ToolStripButton
    Friend WithEvents tsBtnSave As ToolStripButton
    Friend WithEvents tsBtnNew As ToolStripButton
-   Friend WithEvents tsBtnTree As ToolStripButton
    Friend WithEvents ssStatusLabel As ToolStripStatusLabel
-   Friend WithEvents ToolStripSeparator2 As ToolStripSeparator
-   Friend WithEvents tsBtnAddMember As ToolStripButton
 
 End Class
