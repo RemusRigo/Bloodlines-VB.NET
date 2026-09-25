@@ -60,7 +60,6 @@ Public Class frmBloodlines
       Me.Text = AppData.appTitle
 
       ' disable buttons
-      tsBtnSave.Enabled = False
       tsBtnMembers.Enabled = False
       tsBtnList.Enabled = False
       tsBtnTree.Enabled = False
@@ -70,7 +69,8 @@ Public Class frmBloodlines
       lstTrees.Top = 3
       lstTrees.Width = 200
       lstTrees.Height = pnlPlaceholder.Height - 6
-      lstTrees.Dock = DockStyle.Left And DockStyle.Top And DockStyle.Bottom
+      ' DockStyle isn't a flags enum (Left And Top And Bottom = None); anchoring keeps the list full-height on resize
+      lstTrees.Anchor = AnchorStyles.Left Or AnchorStyles.Top Or AnchorStyles.Bottom
       AddHandler lstTrees.DoubleClick, AddressOf lstTrees_DoubleClick
       pnlPlaceholder.Controls.Add(lstTrees)
       lstTrees.Visible = False
@@ -97,6 +97,10 @@ Public Class frmBloodlines
 
       Dim treeName As String = InputBox("Enter a name for the new family tree:", "Name").Trim()
       If treeName.Length = 0 Then Return
+      If treeName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 Then
+         MessageBox.Show("A tree name can't contain any of these characters: \ / : * ? "" < > |", "New tree", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+         Return
+      End If
       If File.Exists(FamilyTree.PathFor(treeName)) Then
          MessageBox.Show($"A tree named '{treeName}' already exists.", "New tree", MessageBoxButtons.OK, MessageBoxIcon.Warning)
          Return
@@ -108,7 +112,6 @@ Public Class frmBloodlines
       ssStatusLabel.Text = $"Created {Tree.Name}."
 
       ' enable buttons
-      tsBtnSave.Enabled = True
       tsBtnMembers.Enabled = True
       tsBtnList.Enabled = True
       tsBtnTree.Enabled = True
@@ -130,7 +133,7 @@ Public Class frmBloodlines
 
    '-----------------------------------------------------------------------------------------------
    ' tsBtnSave: OnClick: Save the current tree
-   Private Sub tsBtnSave_Click(sender As Object, e As EventArgs) Handles tsBtnSave.Click
+   Private Sub tsBtnSave_Click(sender As Object, e As EventArgs)
       If Not EnsureTree() Then Return
       Tree.Save()
    End Sub
@@ -138,28 +141,22 @@ Public Class frmBloodlines
    '-----------------------------------------------------------------------------------------------
    ' tsBtnList: OnClick: Show the list of members
    Private Sub tsBtnList_Click(sender As Object, e As EventArgs) Handles tsBtnList.Click
-      Me.Text = AppData.appTitle & " [Members of " & Tree.Name & "]"
       ClearPlaceholder()
-      If Tree Is Nothing Then
-         MessageBox.Show("No family tree loaded.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-      Else
-         Dim frmChild As New frmListMembers
-         If frmChild IsNot Nothing Then
-            frmChild.TopLevel = False
-            frmChild.FormBorderStyle = FormBorderStyle.None
-            frmChild.Dock = DockStyle.Fill
-            frmChild.Tree = Me.Tree
-            pnlPlaceholder.Controls.Add(frmChild)
-            frmChild.Show()
-         End If
-         lastForm = frmChild
-      End If
+      If Not EnsureTree() Then Return
+      Me.Text = AppData.appTitle & " [Members of " & Tree.Name & "]"
+      Dim frmChild As New frmListMembers With {
+         .TopLevel = False,
+         .FormBorderStyle = FormBorderStyle.None,
+         .Dock = DockStyle.Fill,
+         .Tree = Me.Tree}
+      pnlPlaceholder.Controls.Add(frmChild)
+      frmChild.Show()
+      lastForm = frmChild
    End Sub
 
    '-----------------------------------------------------------------------------------------------
    ' tsBtnTree: OnClick: Show the tree chart
    Private Sub tsBtnTree_Click(sender As Object, e As EventArgs) Handles tsBtnTree.Click
-      Me.Text = AppData.appTitle & " [" & Tree.Name & " Tree]"
       ShowTree()
    End Sub
 
@@ -168,6 +165,7 @@ Public Class frmBloodlines
    Private Sub ShowTree()
       ClearPlaceholder()
       If Not EnsureTree() Then Return
+      Me.Text = AppData.appTitle & " [" & Tree.Name & " Tree]"   ' here, so a linked tree updates the title too
       Dim frmChild As New frmUCTree With {.Dock = DockStyle.Fill, .Tree = Me.Tree}
       AddHandler frmChild.OpenTreeRequested, AddressOf frmUCTree_OpenTreeRequested
       pnlPlaceholder.Controls.Add(frmChild)
@@ -227,11 +225,11 @@ Public Class frmBloodlines
       Dim lst As ListBox = CType(sender, ListBox)
       If lst.SelectedItem Is Nothing Then Return
       If Not LoadTree(FamilyTree.PathFor(lst.SelectedItem.ToString())) Then Return
+      Me.Text = AppData.appTitle & " [" & lst.SelectedItem.ToString() & "]"
       lstTrees.Visible = False
       lstTrees.Items.Clear()
 
       ' enable buttons
-      tsBtnSave.Enabled = True
       tsBtnMembers.Enabled = True
       tsBtnList.Enabled = True
       tsBtnTree.Enabled = True

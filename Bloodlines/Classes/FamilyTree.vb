@@ -51,7 +51,7 @@ Namespace Bloodlines
          If String.IsNullOrWhiteSpace(treeName) Then
             Throw New ArgumentException("A tree name is required.", NameOf(treeName))
          End If
-         SourcePath = Path.Combine(TreesFolder, treeName & ".json")
+         SourcePath = PathFor(treeName)
       End Sub
 
       ' Photos live in a folder named after the tree, next to the tree file:
@@ -115,7 +115,11 @@ Namespace Bloodlines
          Dim opts As New JsonSerializerOptions With {.WriteIndented = True}
          Directory.CreateDirectory(IO.Path.GetDirectoryName(path))   ' make sure \Trees exists
          Version = CurrentVersion
-         File.WriteAllText(path, JsonSerializer.Serialize(Me, opts))
+         ' Write to a temp file first, then swap it in: a crash or full disk mid-write
+         ' can't leave the only copy of the tree half-written.
+         Dim tmp As String = path & ".tmp"
+         File.WriteAllText(tmp, JsonSerializer.Serialize(Me, opts))
+         File.Move(tmp, path, True)
          SourcePath = path
       End Sub
 

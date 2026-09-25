@@ -28,7 +28,6 @@ Partial Class frmBloodlines
       ToolStrip = New ToolStrip()
       tsBtnNew = New ToolStripButton()
       tsBtnLoad = New ToolStripButton()
-      tsBtnSave = New ToolStripButton()
       tsBtnSep1 = New ToolStripSeparator()
       tsBtnMembers = New ToolStripButton()
       tsBtnList = New ToolStripButton()
@@ -53,7 +52,7 @@ Partial Class frmBloodlines
       ' 
       ' ToolStrip
       ' 
-      ToolStrip.Items.AddRange(New ToolStripItem() {tsBtnNew, tsBtnLoad, tsBtnSave, tsBtnSep1, tsBtnMembers, tsBtnList, tsBtnTree})
+      ToolStrip.Items.AddRange(New ToolStripItem() {tsBtnNew, tsBtnLoad, tsBtnSep1, tsBtnMembers, tsBtnList, tsBtnTree})
       ToolStrip.Location = New Point(0, 0)
       ToolStrip.Name = "ToolStrip"
       ToolStrip.Size = New Size(800, 25)
@@ -78,15 +77,6 @@ Partial Class frmBloodlines
       tsBtnLoad.Size = New Size(23, 22)
       tsBtnLoad.Text = "Load Family Tree"
       tsBtnLoad.ToolTipText = "Load Family Tree"
-      ' 
-      ' tsBtnSave
-      ' 
-      tsBtnSave.DisplayStyle = ToolStripItemDisplayStyle.Image
-      tsBtnSave.Image = CType(resources.GetObject("tsBtnSave.Image"), Image)
-      tsBtnSave.ImageTransparentColor = Color.Magenta
-      tsBtnSave.Name = "tsBtnSave"
-      tsBtnSave.Size = New Size(23, 22)
-      tsBtnSave.Text = "Save Family Tree"
       ' 
       ' tsBtnSep1
       ' 
@@ -156,7 +146,6 @@ Partial Class frmBloodlines
    Friend WithEvents tsBtnList As ToolStripButton
    Friend WithEvents tsBtnLoad As ToolStripButton
    Friend WithEvents tsBtnTree As ToolStripButton
-   Friend WithEvents tsBtnSave As ToolStripButton
    Friend WithEvents tsBtnNew As ToolStripButton
    Friend WithEvents ssStatusLabel As ToolStripStatusLabel
 

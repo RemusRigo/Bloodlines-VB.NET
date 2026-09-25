@@ -31,7 +31,7 @@ Public Class frmListMembers
       lvMembers.Items.Clear()
 
       For Each p As Person In ft.People
-         Dim item As New ListViewItem(p.ID)
+         Dim item As New ListViewItem(p.ID.ToString())
          item.SubItems.Add(p.FirstName)
          item.SubItems.Add(p.LastName)
 
@@ -67,7 +67,7 @@ Public Class frmListMembers
    Private Sub frmListMembers_Load(sender As Object, e As EventArgs) Handles MyBase.Load
       lvMembers.View = View.Details
       lvMembers.FullRowSelect = True
-      lvMembers.Font = New Font("Segoe UI", 9, FontStyle.Regular)
+      'lvMembers.Font = New Font("Segoe UI", 9, FontStyle.Regular)
       lvMembers.Columns.Add("ID", 23, HorizontalAlignment.Left)
       lvMembers.Columns.Add("First Name", 100, HorizontalAlignment.Left)
       lvMembers.Columns.Add("Last Name", 100, HorizontalAlignment.Left)

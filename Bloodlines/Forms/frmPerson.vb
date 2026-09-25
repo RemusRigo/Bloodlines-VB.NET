@@ -84,7 +84,7 @@ Public Class frmPerson
       Dim hasPeople As Boolean = Tree.People.Count > 0
       btnPrev.Enabled = hasPeople
       btnNext.Enabled = hasPeople
-      Me.Text = If(currentID >= 0, $"Person {currentID + 1} of {Tree.People.Count}", "Person (new)")
+      Me.Text = "[" & Tree.Name & "] " & If(currentID >= 0, $"Person {currentID + 1} of {Tree.People.Count}", "Person (new)")
 
       LoadMembers()
       RefreshConnections()
@@ -101,8 +101,9 @@ Public Class frmPerson
       Else
          p.Sex = Nothing
       End If
-      p.BirthDate = If(chkBoxBirthDate.Checked, CType(dtPickerBirthDate.Value, Date?), Nothing)
-      p.DeathDate = If(chkBoxDeathDate.Checked, CType(dtPickerDeathDate.Value, Date?), Nothing)
+      ' .Date: the picker's Value carries the time of day it was created at, which ended up in the JSON
+      p.BirthDate = If(chkBoxBirthDate.Checked, CType(dtPickerBirthDate.Value.Date, Date?), Nothing)
+      p.DeathDate = If(chkBoxDeathDate.Checked, CType(dtPickerDeathDate.Value.Date, Date?), Nothing)
       p.Notes = txtBoxNotes.Text
       Dim link As String = NormalizeTreeLink(txtBoxTreeLink.Text)
       p.TreeLink = If(IsOwnTree(link), Nothing, link)   ' a link to the open tree would do nothing
@@ -144,6 +145,13 @@ Public Class frmPerson
 
    ' Save what's on screen. Returns False to cancel navigation (e.g. failed validation).
    Private Function CommitCurrent() As Boolean
+      If chkBoxBirthDate.Checked AndAlso chkBoxDeathDate.Checked AndAlso
+         dtPickerDeathDate.Value.Date < dtPickerBirthDate.Value.Date Then
+         MessageBox.Show("The death date is before the birth date.", "Person", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+         dtPickerDeathDate.Focus()
+         Return False
+      End If
+
       If currentID >= 0 AndAlso currentID < Tree.People.Count Then
          ApplyTo(Tree.People(currentID))
       Else
@@ -181,6 +189,7 @@ Public Class frmPerson
 
 
    Private Sub frmPerson_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+      Me.Text = Tree.Name
       txtBoxID.Text = Tree.NextID().ToString()
 
       cbSex.Items.Clear()
@@ -316,6 +325,11 @@ Public Class frmPerson
       ' no duplicates
       If self.Relationships.Any(Function(r) r.RelativeID = sel.Person.ID AndAlso r.Type = relType) Then
          MessageBox.Show("That connection already exists.")
+         Return
+      End If
+      ' one father and one mother at most (the tree's context menu enforces the same)
+      If relType <> Relationship.RelationType.Spouse AndAlso self.Relationships.Any(Function(r) r.Type = relType) Then
+         MessageBox.Show($"This person already has a {relType}. Remove it first to change it.")
          Return
       End If
 

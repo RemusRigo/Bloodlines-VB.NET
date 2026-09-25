@@ -133,8 +133,10 @@ Public Class frmUCTree
    End Sub
 
    ' GDI/GDI+ resources aren't garbage-collected promptly, so free them explicitly
-   ' once the control's window handle goes away (control removed/host form closing).
-   Private Sub frmUCTree_HandleDestroyed(sender As Object, e As EventArgs) Handles Me.HandleDestroyed
+   ' once the control is disposed. (Not on HandleDestroyed: a handle can be recreated and
+   ' the control keeps painting with the same fonts/formats afterwards.)
+   Private Sub frmUCTree_Disposed(sender As Object, e As EventArgs) Handles Me.Disposed
+      If pnlChart.ContextMenuStrip IsNot Nothing Then pnlChart.ContextMenuStrip.Dispose()
       If _nameFont IsNot Nothing Then _nameFont.Dispose()
       If _dateFont IsNot Nothing Then _dateFont.Dispose()
       _tip.Dispose()
@@ -437,7 +439,11 @@ Public Class frmUCTree
       pnlChart.Focus()
       If e.Button = MouseButtons.Right Then
          Dim hit As Person = PersonAt(e.Location)
+         ' The previous menu closed long ago, so it's safe to dispose here (unlike from its own
+         ' click handler) - otherwise every right-click leaks a window handle.
+         Dim oldMenu As ContextMenuStrip = pnlChart.ContextMenuStrip
          pnlChart.ContextMenuStrip = If(hit IsNot Nothing, BuildPersonMenu(hit), Nothing)
+         If oldMenu IsNot Nothing Then oldMenu.Dispose()
          Return
       End If
       If e.Button <> MouseButtons.Left Then Return
