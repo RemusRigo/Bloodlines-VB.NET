@@ -1,4 +1,10 @@
-﻿Namespace Bloodlines
+﻿'--------------------------------------------------------------------------------------------------
+' Bloodlines: Relationship.vb: Relationship class
+'    © 2026 Remus Rigo
+'       v1.0.20260925
+'--------------------------------------------------------------------------------------------------
+
+Namespace Bloodlines
 
    Public Class Relationship
       Public Enum RelationType

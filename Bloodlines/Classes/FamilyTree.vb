@@ -1,3 +1,9 @@
+'--------------------------------------------------------------------------------------------------
+' Bloodlines: FamilyTree.vb: Family tree class
+'    © 2026 Remus Rigo
+'       v1.0.20260925
+'--------------------------------------------------------------------------------------------------
+
 Imports System.IO
 Imports System.Text.Json
 Imports System.Text.Json.Serialization
@@ -8,7 +14,7 @@ Namespace Bloodlines
 
    Public Class FamilyTree
       ' Bump when the JSON shape changes, and add a step to Migrate().
-      Public Const CurrentVersion As Double = 1.02
+      Public Const CurrentVersion As Double = 1.03
 
       Public Property Version As Double = CurrentVersion
       Public Property People As New List(Of Person)
@@ -21,6 +27,12 @@ Namespace Bloodlines
             Return Path.Combine(Application.StartupPath, "Trees")
          End Get
       End Property
+
+      ' Full path of the tree file called `treeName` (bare name, no extension) in TreesFolder.
+      ' Any folder part in treeName is dropped, so a hand-edited "..\x" can't escape TreesFolder.
+      Public Shared Function PathFor(treeName As String) As String
+         Return Path.Combine(TreesFolder, Path.GetFileName(treeName) & ".json")
+      End Function
 
       <JsonIgnore>
       Public ReadOnly Property Name As String
@@ -139,6 +151,9 @@ Namespace Bloodlines
 
          ' 1.01 -> 1.02: Person gained BirthName, BirthPlace and DeathPlace (optional; nothing to convert).
          If Version < 1.02 Then Version = 1.02
+
+         ' 1.02 -> 1.03: Person gained TreeLink (optional; nothing to convert).
+         If Version < 1.03 Then Version = 1.03
       End Sub
 
 

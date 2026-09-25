@@ -85,4 +85,9 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Modules\" />
+    <Folder Include="API\" />
+  </ItemGroup>
+
 </Project>

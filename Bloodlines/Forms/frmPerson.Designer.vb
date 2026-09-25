@@ -56,6 +56,8 @@ Partial Class frmPerson
       txtBoxDeathPlace = New TextBox()
       lblDeathPlace = New Label()
       btnAdd = New Button()
+      txtBoxTreeLink = New TextBox()
+      lblTreeLink = New Label()
       grpBoxNotes.SuspendLayout()
       CType(picBoxProfile, ComponentModel.ISupportInitialize).BeginInit()
       grpBoxConnections.SuspendLayout()
@@ -86,7 +88,7 @@ Partial Class frmPerson
       txtBoxID.Name = "txtBoxID"
       txtBoxID.PlaceholderText = "ID"
       txtBoxID.ReadOnly = True
-      txtBoxID.Size = New Size(121, 23)
+      txtBoxID.Size = New Size(135, 23)
       txtBoxID.TabIndex = 2
       ' 
       ' txtBoxFirstName
@@ -94,7 +96,7 @@ Partial Class frmPerson
       txtBoxFirstName.Location = New Point(98, 33)
       txtBoxFirstName.Name = "txtBoxFirstName"
       txtBoxFirstName.PlaceholderText = "First Name"
-      txtBoxFirstName.Size = New Size(121, 23)
+      txtBoxFirstName.Size = New Size(135, 23)
       txtBoxFirstName.TabIndex = 4
       ' 
       ' lblFirstName
@@ -111,7 +113,7 @@ Partial Class frmPerson
       txtBoxLastName.Location = New Point(98, 60)
       txtBoxLastName.Name = "txtBoxLastName"
       txtBoxLastName.PlaceholderText = "Last Name"
-      txtBoxLastName.Size = New Size(121, 23)
+      txtBoxLastName.Size = New Size(135, 23)
       txtBoxLastName.TabIndex = 6
       ' 
       ' lblLastName
@@ -137,7 +139,7 @@ Partial Class frmPerson
       cbSex.FormattingEnabled = True
       cbSex.Location = New Point(98, 118)
       cbSex.Name = "cbSex"
-      cbSex.Size = New Size(121, 23)
+      cbSex.Size = New Size(135, 23)
       cbSex.TabIndex = 9
       ' 
       ' grpBoxNotes
@@ -176,7 +178,7 @@ Partial Class frmPerson
       dtPickerBirthDate.Format = DateTimePickerFormat.Short
       dtPickerBirthDate.Location = New Point(98, 143)
       dtPickerBirthDate.Name = "dtPickerBirthDate"
-      dtPickerBirthDate.Size = New Size(121, 23)
+      dtPickerBirthDate.Size = New Size(135, 23)
       dtPickerBirthDate.TabIndex = 16
       ' 
       ' dtPickerDeathDate
@@ -184,7 +186,7 @@ Partial Class frmPerson
       dtPickerDeathDate.Format = DateTimePickerFormat.Short
       dtPickerDeathDate.Location = New Point(98, 201)
       dtPickerDeathDate.Name = "dtPickerDeathDate"
-      dtPickerDeathDate.Size = New Size(121, 23)
+      dtPickerDeathDate.Size = New Size(135, 23)
       dtPickerDeathDate.TabIndex = 17
       ' 
       ' chkBoxDeathDate
@@ -255,7 +257,7 @@ Partial Class frmPerson
       cbPerson.FormattingEnabled = True
       cbPerson.Location = New Point(86, 51)
       cbPerson.Name = "cbPerson"
-      cbPerson.Size = New Size(121, 23)
+      cbPerson.Size = New Size(208, 23)
       cbPerson.TabIndex = 13
       ' 
       ' lblPersonID
@@ -273,7 +275,7 @@ Partial Class frmPerson
       cbRelation.FormattingEnabled = True
       cbRelation.Location = New Point(86, 22)
       cbRelation.Name = "cbRelation"
-      cbRelation.Size = New Size(121, 23)
+      cbRelation.Size = New Size(208, 23)
       cbRelation.TabIndex = 11
       ' 
       ' lblRelation
@@ -310,7 +312,7 @@ Partial Class frmPerson
       txtBoxBirthName.Location = New Point(98, 89)
       txtBoxBirthName.Name = "txtBoxBirthName"
       txtBoxBirthName.PlaceholderText = "Birth Name"
-      txtBoxBirthName.Size = New Size(121, 23)
+      txtBoxBirthName.Size = New Size(135, 23)
       txtBoxBirthName.TabIndex = 24
       ' 
       ' lblBirthName
@@ -327,7 +329,7 @@ Partial Class frmPerson
       txtBoxBirthPlace.Location = New Point(98, 172)
       txtBoxBirthPlace.Name = "txtBoxBirthPlace"
       txtBoxBirthPlace.PlaceholderText = "Birth Place"
-      txtBoxBirthPlace.Size = New Size(121, 23)
+      txtBoxBirthPlace.Size = New Size(135, 23)
       txtBoxBirthPlace.TabIndex = 26
       ' 
       ' lblBirthPlace
@@ -344,7 +346,7 @@ Partial Class frmPerson
       txtBoxDeathPlace.Location = New Point(98, 230)
       txtBoxDeathPlace.Name = "txtBoxDeathPlace"
       txtBoxDeathPlace.PlaceholderText = "Death Place"
-      txtBoxDeathPlace.Size = New Size(121, 23)
+      txtBoxDeathPlace.Size = New Size(135, 23)
       txtBoxDeathPlace.TabIndex = 28
       ' 
       ' lblDeathPlace
@@ -366,11 +368,30 @@ Partial Class frmPerson
       btnAdd.TabIndex = 29
       btnAdd.UseVisualStyleBackColor = True
       ' 
+      ' txtBoxTreeLink
+      ' 
+      txtBoxTreeLink.Location = New Point(325, 410)
+      txtBoxTreeLink.Name = "txtBoxTreeLink"
+      txtBoxTreeLink.PlaceholderText = "Tree Link"
+      txtBoxTreeLink.Size = New Size(199, 23)
+      txtBoxTreeLink.TabIndex = 31
+      ' 
+      ' lblTreeLink
+      ' 
+      lblTreeLink.AutoSize = True
+      lblTreeLink.Location = New Point(239, 413)
+      lblTreeLink.Name = "lblTreeLink"
+      lblTreeLink.Size = New Size(57, 15)
+      lblTreeLink.TabIndex = 30
+      lblTreeLink.Text = "Tree Link:"
+      ' 
       ' frmPerson
       ' 
       AutoScaleDimensions = New SizeF(7F, 15F)
       AutoScaleMode = AutoScaleMode.Font
       ClientSize = New Size(1135, 435)
+      Controls.Add(txtBoxTreeLink)
+      Controls.Add(lblTreeLink)
       Controls.Add(btnAdd)
       Controls.Add(txtBoxDeathPlace)
       Controls.Add(lblDeathPlace)
@@ -397,6 +418,7 @@ Partial Class frmPerson
       Controls.Add(lblID)
       Controls.Add(btnOk)
       Name = "frmPerson"
+      StartPosition = FormStartPosition.CenterParent
       Text = "Person"
       grpBoxNotes.ResumeLayout(False)
       grpBoxNotes.PerformLayout()
@@ -440,4 +462,6 @@ Partial Class frmPerson
    Friend WithEvents txtBoxDeathPlace As TextBox
    Friend WithEvents lblDeathPlace As Label
    Friend WithEvents btnAdd As Button
+   Friend WithEvents txtBoxTreeLink As TextBox
+   Friend WithEvents lblTreeLink As Label
 End Class

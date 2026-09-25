@@ -1,5 +1,10 @@
-﻿Imports System.ComponentModel
-Imports System.Windows.Forms.VisualStyles.VisualStyleElement
+﻿'--------------------------------------------------------------------------------------------------
+' Bloodlines: frmListMembers.vb: List members form
+'    © 2026 Remus Rigo
+'       v1.0.20260925
+'--------------------------------------------------------------------------------------------------
+
+Imports System.ComponentModel
 Imports Bloodlines.Bloodlines
 
 Public Class frmListMembers

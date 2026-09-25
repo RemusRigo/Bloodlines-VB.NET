@@ -30,9 +30,9 @@ Partial Class frmBloodlines
       tsBtnLoad = New ToolStripButton()
       tsBtnSave = New ToolStripButton()
       tsBtnSep1 = New ToolStripSeparator()
+      tsBtnMembers = New ToolStripButton()
       tsBtnList = New ToolStripButton()
       tsBtnTree = New ToolStripButton()
-      tsBtnMembers = New ToolStripButton()
       pnlPlaceholder = New Panel()
       StatusStrip.SuspendLayout()
       ToolStrip.SuspendLayout()
@@ -93,6 +93,15 @@ Partial Class frmBloodlines
       tsBtnSep1.Name = "tsBtnSep1"
       tsBtnSep1.Size = New Size(6, 25)
       ' 
+      ' tsBtnMembers
+      ' 
+      tsBtnMembers.DisplayStyle = ToolStripItemDisplayStyle.Image
+      tsBtnMembers.Image = CType(resources.GetObject("tsBtnMembers.Image"), Image)
+      tsBtnMembers.ImageTransparentColor = Color.Magenta
+      tsBtnMembers.Name = "tsBtnMembers"
+      tsBtnMembers.Size = New Size(23, 22)
+      tsBtnMembers.Text = "View Members"
+      ' 
       ' tsBtnList
       ' 
       tsBtnList.DisplayStyle = ToolStripItemDisplayStyle.Image
@@ -110,15 +119,6 @@ Partial Class frmBloodlines
       tsBtnTree.Name = "tsBtnTree"
       tsBtnTree.Size = New Size(23, 22)
       tsBtnTree.Text = "ToolStripButton2"
-      ' 
-      ' tsBtnMembers
-      ' 
-      tsBtnMembers.DisplayStyle = ToolStripItemDisplayStyle.Image
-      tsBtnMembers.Image = CType(resources.GetObject("tsBtnMembers.Image"), Image)
-      tsBtnMembers.ImageTransparentColor = Color.Magenta
-      tsBtnMembers.Name = "tsBtnMembers"
-      tsBtnMembers.Size = New Size(23, 22)
-      tsBtnMembers.Text = "View Members"
       ' 
       ' pnlPlaceholder
       ' 
@@ -138,6 +138,7 @@ Partial Class frmBloodlines
       Controls.Add(ToolStrip)
       Controls.Add(StatusStrip)
       Name = "frmBloodlines"
+      StartPosition = FormStartPosition.CenterScreen
       Text = "Bloodlines"
       StatusStrip.ResumeLayout(False)
       StatusStrip.PerformLayout()

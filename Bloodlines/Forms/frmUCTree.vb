@@ -1,3 +1,9 @@
+'--------------------------------------------------------------------------------------------------
+' Bloodlines: frmBloodlines.vb: Main form
+'    © 2026 Remus Rigo
+'       v1.0.20260925
+'--------------------------------------------------------------------------------------------------
+
 Imports System.ComponentModel
 Imports System.Drawing.Drawing2D
 Imports System.IO
@@ -23,12 +29,22 @@ Public Class frmUCTree
    Private Const NodeHeight As Integer = 84     ' height of one person's card
    Private Const HGap As Integer = 26           ' horizontal gap between sibling subtrees
    Private Const VGap As Integer = 46           ' vertical gap between generations
-   Private Const TreeMargin As Integer = 24         ' padding around the whole layout
+   Private Const TreeMargin As Integer = 24     ' padding around the whole layout
    Private Const MaxDepth As Integer = 20       ' guard against pathological/cyclic data
    Private Const SpouseGap As Integer = 6       ' gap between a person and their spouse box(es)
    Private Const CardPad As Integer = 6         ' padding inside a person card
    Private Const PhotoWidth As Integer = 62     ' width of the photo on a card
+   Private Const BadgeSize As Integer = 18      ' "open linked tree" (+) button in a card's top-right corner
+   Private Const BadgeInset As Integer = 4      ' gap between that button and the card's edges
 
+   ' Raised when the user clicks a person's "+" tree-link button (Person.TreeLink);
+   ' the host form loads that tree and shows it.
+   Public Event OpenTreeRequested(treeName As String)
+
+   ' When this chart was loaded (Environment.TickCount64). "+" clicks within one double-click
+   ' interval of that are ignored: if the user double-clicked a "+" out of habit, the first
+   ' click already switched trees, and the second must not hit a "+" on the new chart and bounce back.
+   Private _loadedAt As Long
    ' --- zoom/pan state ---
    ' The chart is drawn in its own unscaled "content" coordinate space (see LayoutNodes),
    ' then mapped onto the screen each paint via a translate-then-scale transform:
@@ -52,7 +68,8 @@ Public Class frmUCTree
       Public ReadOnly Spouses As New List(Of Person)    ' drawn beside, same generation
       Public Cx As Integer                              ' couple block centre X (content coords)
       Public Y As Integer                               ' box top Y (content coords)
-      Public W As Integer                               ' subtree width, used only during layout
+      Public L As Integer                               ' subtree extent left of PrimaryCx, used only during layout
+      Public R As Integer                               ' subtree extent right of PrimaryCx, used only during layout
    End Class
 
    Private ReadOnly _byId As New Dictionary(Of Integer, Person)   ' fast Person lookup by ID
@@ -93,6 +110,7 @@ Public Class frmUCTree
    ' ---------------------------------------------------------------- setup ---
 
    Private Sub frmUCTree_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+      _loadedAt = Environment.TickCount64
       _nameFont = New Font(Font.FontFamily, Font.Size + 2.0F)
       _dateFont = New Font(Font.FontFamily, Font.Size + 0.5F)
 
@@ -131,10 +149,8 @@ Public Class frmUCTree
       Next
    End Sub
 
-   ' ---------------------------------------------------------------- model ---
-   ' Rebuilds the node tree around a new focus person, re-lays it out, and
-   ' re-centres the view on it (keeping the current zoom level).
-
+   '-----------------------------------------------------------------------------------------------
+   ' Rebuilds the node tree around a new focus person, re-lays it out, and re-centres the view on it (keeping the current zoom level).
    Private Sub SetFocus(p As Person)
       If p Is Nothing Then Return
       BuildNodes(p)
@@ -143,6 +159,7 @@ Public Class frmUCTree
       pnlChart.Invalidate()
    End Sub
 
+   '-----------------------------------------------------------------------------------------------
    ' Builds the Node graph: descendants of p downward, ancestors of p upward,
    ' merged into one tree hanging off a single focus Node.
    Private Sub BuildNodes(focus As Person)
@@ -201,7 +218,6 @@ Public Class frmUCTree
    ' Positions every node in unscaled "content" coordinates (Node.Cx/Node.Y).
    ' Zoom/pan are applied later, only at paint time - the layout itself never changes
    ' with zoom, which keeps all the box/line geometry math simple.
-
    Private Sub LayoutNodes()
       _allNodes.Clear()
       If _focus Is Nothing Then Return
@@ -253,16 +269,22 @@ Public Class frmUCTree
       Return n.Cx - CoupleWidth(n) \ 2 + NodeWidth \ 2
    End Function
 
-   ' Computes (and caches in node.W) how wide this node's subtree needs to be:
-   ' either its own couple-width, or the sum of its children's subtree widths, whichever
-   ' is larger. `seen` prevents re-measuring/looping on a node reachable two ways.
+   ' Inverse of PrimaryCx: the couple block centre that puts n's own box centre at `primary`.
+   Private Shared Function CxFromPrimary(n As Node, primary As Integer) As Integer
+      Return primary - NodeWidth \ 2 + CoupleWidth(n) \ 2
+   End Function
+
+   ' Computes (and caches in node.L/node.R) how far this node's subtree extends to the left
+   ' and right of PrimaryCx(node). The node's own box is centred on PrimaryCx with any spouse
+   ' boxes hanging off to the right, and its children are centred under PrimaryCx too, so the
+   ' extents are asymmetric whenever there's a spouse - a single width centred on the couple
+   ' block (node.Cx) would under-reserve on the left and let the kids overlap the neighbours.
+   ' `seen` prevents re-measuring/looping on a node reachable two ways.
    Private Function Measure(node As Node, childrenOf As Func(Of Node, List(Of Node)), seen As HashSet(Of Node)) As Integer
-      Dim ownWidth As Integer = CoupleWidth(node)
+      node.L = NodeWidth \ 2
+      node.R = CoupleWidth(node) - node.L
       Dim kids As List(Of Node) = childrenOf(node)
-      If Not seen.Add(node) OrElse kids.Count = 0 Then
-         node.W = ownWidth
-         Return node.W
-      End If
+      If Not seen.Add(node) OrElse kids.Count = 0 Then Return node.L + node.R
 
       Dim total As Integer = 0
       For i As Integer = 0 To kids.Count - 1
@@ -270,8 +292,9 @@ Public Class frmUCTree
          If i < kids.Count - 1 Then total += HGap
       Next
 
-      node.W = Math.Max(ownWidth, total)
-      Return node.W
+      node.L = Math.Max(node.L, total \ 2)
+      node.R = Math.Max(node.R, total - total \ 2)
+      Return node.L + node.R
    End Function
 
    ' Deepest generation reached below `node` (0 = node itself), used to size the
@@ -303,24 +326,24 @@ Public Class frmUCTree
    ' node had a spouse - most visible, but not limited to, the ancestor side (see
    ' PlaceParents) with a lopsided family (e.g. one parent's own ancestors are known and
    ' take up much more width than the other's).
-   Private Sub PlaceDown(node As Node, cx As Integer, gen As Integer)
-      node.Cx = cx
+   ' `primary` is where node's own box centre goes (PrimaryCx), not the couple block centre;
+   ' each kid is positioned by its own L/R extents around its PrimaryCx (see Measure).
+   Private Sub PlaceDown(node As Node, primary As Integer, gen As Integer)
+      node.Cx = CxFromPrimary(node, primary)
       node.Y = _focusTopY + gen * (NodeHeight + VGap)
       If node.Kids.Count = 0 Then Return
 
-      Dim primary As Integer = PrimaryCx(node)
-      Dim total As Integer = node.Kids.Sum(Function(k) k.W) + HGap * (node.Kids.Count - 1)
+      Dim total As Integer = node.Kids.Sum(Function(k) k.L + k.R) + HGap * (node.Kids.Count - 1)
       Dim start As Integer = primary - total \ 2
       For Each k As Node In node.Kids
-         PlaceDown(k, start + k.W \ 2, gen + 1)
-         start += k.W + HGap
+         PlaceDown(k, start + k.L, gen + 1)
+         start += k.L + k.R + HGap
       Next
    End Sub
 
-   ' Places the focus person at content X = 0, then recursively places ancestors above it.
+   ' The focus person was already placed by PlaceDown (own box centred at content X = 0);
+   ' this just recursively places the ancestors above it.
    Private Sub PlaceUp(focus As Node)
-      focus.Cx = 0
-      focus.Y = _focusTopY
       PlaceParents(focus, 1)
    End Sub
 
@@ -330,12 +353,12 @@ Public Class frmUCTree
       If node.Parents.Count = 0 Then Return
 
       Dim primary As Integer = PrimaryCx(node)
-      Dim total As Integer = node.Parents.Sum(Function(p) p.W) + HGap * (node.Parents.Count - 1)
+      Dim total As Integer = node.Parents.Sum(Function(p) p.L + p.R) + HGap * (node.Parents.Count - 1)
       Dim start As Integer = primary - total \ 2
       For Each p As Node In node.Parents
-         p.Cx = start + p.W \ 2
+         p.Cx = CxFromPrimary(p, start + p.L)
          p.Y = _focusTopY - gen * (NodeHeight + VGap)
-         start += p.W + HGap
+         start += p.L + p.R + HGap
          PlaceParents(p, gen + 1)
       Next
    End Sub
@@ -418,6 +441,16 @@ Public Class frmUCTree
          Return
       End If
       If e.Button <> MouseButtons.Left Then Return
+
+      ' A click on a person's "+" tree-link button opens that tree instead of starting a pan.
+      Dim linked As Person = LinkBadgeAt(e.Location)
+      If linked IsNot Nothing Then
+         If Environment.TickCount64 - _loadedAt >= SystemInformation.DoubleClickTime Then
+            RaiseEvent OpenTreeRequested(linked.TreeLink.Trim())
+         End If
+         Return
+      End If
+
       _dragging = True
       _dragLast = e.Location
       pnlChart.Cursor = Cursors.SizeAll
@@ -577,12 +610,27 @@ Public Class frmUCTree
 
       Dim textX As Integer = photoRect.Right + CardPad + 2
       Dim textW As Integer = rect.Right - CardPad - textX
+      If HasTreeLink(person) Then textW -= BadgeSize + BadgeInset   ' keep long names clear of the "+" button
       Dim lineH As Integer = _nameFont.Height
       Dim y As Integer = rect.Y + (rect.Height - lineH * lines.Count) \ 2
       For Each ln In lines
          g.DrawString(ln.Text, ln.Font, ln.Brush, New RectangleF(textX, y, textW, lineH), _leftFormat)
          y += lineH
       Next
+
+      If HasTreeLink(person) Then DrawLinkBadge(g, BadgeRect(rect))
+   End Sub
+
+   ' A filled blue circle with a white "+", marking a person linked to another tree.
+   Private Shared Sub DrawLinkBadge(g As Graphics, r As Rectangle)
+      Using b As New SolidBrush(Color.FromArgb(33, 102, 172))
+         g.FillEllipse(b, r)
+      End Using
+      Dim cx As Single = r.X + r.Width / 2.0F, cy As Single = r.Y + r.Height / 2.0F, arm As Single = r.Width * 0.28F
+      Using pen As New Pen(Color.White, 2)
+         g.DrawLine(pen, cx - arm, cy, cx + arm, cy)
+         g.DrawLine(pen, cx, cy - arm, cx, cy + arm)
+      End Using
    End Sub
 
    ' Fills r with the photo (cropped to fit, biased toward the top so faces stay in), or a placeholder.
@@ -658,7 +706,9 @@ Public Class frmUCTree
          Return
       End If
 
-      ' Not dragging: show/update a tooltip for whichever person's box is under the cursor.
+      ' Not dragging: hand cursor over a "+" tree-link button, and show/update a tooltip
+      ' for whichever person's box is under the cursor.
+      pnlChart.Cursor = If(LinkBadgeAt(e.Location) IsNot Nothing, Cursors.Hand, Cursors.Default)
       Dim hit As Person = PersonAt(e.Location)
       If hit Is _hoverPerson Then Return
       _hoverPerson = hit
@@ -684,6 +734,32 @@ Public Class frmUCTree
          For Each sp As Person In n.Spouses
             rect = New Rectangle(rect.Right + SpouseGap, n.Y, NodeWidth, NodeHeight)
             If rect.Contains(x, y) Then Return sp
+         Next
+      Next
+      Return Nothing
+   End Function
+
+   Private Shared Function HasTreeLink(p As Person) As Boolean
+      Return Not String.IsNullOrWhiteSpace(p.TreeLink)
+   End Function
+
+   ' The "+" button's rectangle on a card, in content coordinates.
+   Private Shared Function BadgeRect(card As Rectangle) As Rectangle
+      Return New Rectangle(card.Right - BadgeInset - BadgeSize, card.Y + BadgeInset, BadgeSize, BadgeSize)
+   End Function
+
+   ' Hit-tests a screen/client point against every "+" tree-link button (own boxes and
+   ' spouse boxes), returning the Person it belongs to, or Nothing. Same box geometry as PersonAt.
+   Private Function LinkBadgeAt(screenPoint As Point) As Person
+      Dim content As PointF = ScreenToContent(screenPoint)
+      Dim pt As New Point(CInt(content.X), CInt(content.Y))
+      For Each n As Node In _allNodes
+         Dim rect As New Rectangle(n.Cx - CoupleWidth(n) \ 2, n.Y, NodeWidth, NodeHeight)
+         If HasTreeLink(n.Person) AndAlso BadgeRect(rect).Contains(pt) Then Return n.Person
+
+         For Each sp As Person In n.Spouses
+            rect = New Rectangle(rect.Right + SpouseGap, n.Y, NodeWidth, NodeHeight)
+            If HasTreeLink(sp) AndAlso BadgeRect(rect).Contains(pt) Then Return sp
          Next
       Next
       Return Nothing
@@ -803,6 +879,7 @@ Public Class frmUCTree
       If p.Sex.HasValue Then lines.Add("Sex: " & p.Sex.Value.ToString())
       If p.BirthDate.HasValue Then lines.Add("Born: " & p.BirthDate.Value.ToString("yyyy-MM-dd"))
       If p.DeathDate.HasValue Then lines.Add("Died: " & p.DeathDate.Value.ToString("yyyy-MM-dd"))
+      If Not String.IsNullOrWhiteSpace(p.TreeLink) Then lines.Add($"Tree: {p.TreeLink.Trim()} (click + to open)")
       If Not String.IsNullOrWhiteSpace(p.Notes) Then
          lines.Add("")
          lines.Add(p.Notes.Trim())

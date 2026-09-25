@@ -1,4 +1,10 @@
-﻿Imports System.Text.Json.Serialization
+﻿'--------------------------------------------------------------------------------------------------
+' Bloodlines: Person.vb: Person class
+'    © 2026 Remus Rigo
+'       v1.0.20260925
+'--------------------------------------------------------------------------------------------------
+
+Imports System.Text.Json.Serialization
 
 Namespace Bloodlines
 
@@ -19,6 +25,7 @@ Namespace Bloodlines
       Public Property DeathDate As Date?
       Public Property DeathPlace As String
       Public Property Notes As String
+      Public Property TreeLink As String
       Public Property Relationships As New List(Of Relationship)
 
       ' "(1979 - )" or "(1940 - 2010)"; empty when neither date is known.

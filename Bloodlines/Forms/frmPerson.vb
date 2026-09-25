@@ -1,3 +1,9 @@
+'--------------------------------------------------------------------------------------------------
+' Bloodlines: frmPerson.vb: Person form
+'    © 2026 Remus Rigo
+'       v1.0.20260925
+'--------------------------------------------------------------------------------------------------
+
 Imports System.ComponentModel
 Imports System.IO
 Imports Bloodlines.Bloodlines
@@ -47,6 +53,7 @@ Public Class frmPerson
          dtPickerBirthDate.Enabled = False
          dtPickerDeathDate.Enabled = False
          txtBoxNotes.Clear()
+         txtBoxTreeLink.Clear()
       Else
          Dim p As Person = Tree.People(index)
 
@@ -67,8 +74,10 @@ Public Class frmPerson
          dtPickerDeathDate.Enabled = chkBoxDeathDate.Checked
 
          txtBoxNotes.Text = p.Notes
+         txtBoxTreeLink.Text = p.TreeLink
       End If
 
+      UpdateTreeLinkState()
       LoadPhoto(If(currentID >= 0, Tree.People(currentID).ID, Tree.NextID()))
 
       ' Prev ID / Next ID
@@ -95,6 +104,41 @@ Public Class frmPerson
       p.BirthDate = If(chkBoxBirthDate.Checked, CType(dtPickerBirthDate.Value, Date?), Nothing)
       p.DeathDate = If(chkBoxDeathDate.Checked, CType(dtPickerDeathDate.Value, Date?), Nothing)
       p.Notes = txtBoxNotes.Text
+      Dim link As String = NormalizeTreeLink(txtBoxTreeLink.Text)
+      p.TreeLink = If(IsOwnTree(link), Nothing, link)   ' a link to the open tree would do nothing
+   End Sub
+
+   Private Function IsOwnTree(link As String) As Boolean
+      Return link IsNot Nothing AndAlso String.Equals(link, Tree.Name, StringComparison.OrdinalIgnoreCase)
+   End Function
+
+   ' Tree links are stored as the bare tree name: "Remus Rigo", not "Remus Rigo.json"
+   ' or a full path. Only ".json" is stripped - Path.GetFileNameWithoutExtension would
+   ' also chop names containing a dot (e.g. "J. Smith" -> "J").
+   Private Shared Function NormalizeTreeLink(text As String) As String
+      Dim link As String = If(text, "").Trim()
+      If link.Length = 0 Then Return Nothing                    ' Nothing = no link
+      link = Path.GetFileName(link)                             ' drop any folder part
+      If link.EndsWith(".json", StringComparison.OrdinalIgnoreCase) Then link = link.Substring(0, link.Length - 5).TrimEnd()
+      Return If(link.Length = 0, Nothing, link)
+   End Function
+
+   Private Sub txtBoxTreeLink_Leave(sender As Object, e As EventArgs) Handles txtBoxTreeLink.Leave
+      Dim link As String = NormalizeTreeLink(txtBoxTreeLink.Text)
+      If IsOwnTree(link) Then
+         MessageBox.Show($"'{link}' is the tree that's already open, so it can't be used as a link.",
+                         "Tree Link", MessageBoxButtons.OK, MessageBoxIcon.Information)
+         link = Nothing
+      End If
+      txtBoxTreeLink.Text = If(link, "")
+      UpdateTreeLinkState()
+   End Sub
+
+   ' Red text = no tree file with that name in the Trees folder (typo, or not created yet).
+   Private Sub UpdateTreeLinkState()
+      Dim link As String = NormalizeTreeLink(txtBoxTreeLink.Text)
+      Dim missing As Boolean = link IsNot Nothing AndAlso Not File.Exists(FamilyTree.PathFor(link))
+      txtBoxTreeLink.ForeColor = If(missing, Color.Red, SystemColors.WindowText)
    End Sub
 
 
@@ -160,6 +204,13 @@ Public Class frmPerson
       End If
    End Sub
 
+
+   ' Closing with the X (or Esc/Alt+F4) saves what's on screen too, same as OK -
+   ' otherwise edits made since the last Prev/Next/Add/OK were silently lost.
+   Private Sub frmPerson_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
+      If Tree Is Nothing Then Return
+      If Not CommitCurrent() Then e.Cancel = True
+   End Sub
 
    Private Sub frmPerson_FormClosed(sender As Object, e As FormClosedEventArgs) Handles MyBase.FormClosed
       If picBoxProfile.Image IsNot Nothing Then picBoxProfile.Image.Dispose()
@@ -239,8 +290,7 @@ Public Class frmPerson
    End Sub
 
    Private Sub btnOk_Click(sender As Object, e As EventArgs) Handles btnOk.Click
-      If Not CommitCurrent() Then Return
-      Close()
+      Close()   ' frmPerson_FormClosing saves what's on screen
    End Sub
 
    Private Sub btnAddConection_Click(sender As Object, e As EventArgs) Handles btnAddConection.Click
