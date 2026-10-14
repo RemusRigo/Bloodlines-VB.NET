@@ -39,7 +39,7 @@ See the [User's Guide](UsersGuide.md) for downloads, runtimes, installation and 
 ![VS](https://img.shields.io/badge/IDE-Visual%20Studio-5C2D91?labelColor=555555)
 ![JSON](https://img.shields.io/badge/File-JSON-5C2D91?labelColor=555555)
 <br>
-![status](https://img.shields.io/badge/status-in%20progress-orange) 
+![status](https://img.shields.io/badge/status-completed-brightgreen)
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/RemusRigo/Bloodlines-VB.NET/total)
 
 
