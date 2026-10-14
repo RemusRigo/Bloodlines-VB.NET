@@ -32,6 +32,11 @@ Partial Class frmBloodlines
       tsBtnMembers = New ToolStripButton()
       tsBtnList = New ToolStripButton()
       tsBtnTree = New ToolStripButton()
+      tsBtnSep2 = New ToolStripSeparator()
+      tsBtnPrint = New ToolStripButton()
+      tsBtnExport = New ToolStripButton()
+      tsBtnSep3 = New ToolStripSeparator()
+      tsBtnSettings = New ToolStripButton()
       pnlPlaceholder = New Panel()
       StatusStrip.SuspendLayout()
       ToolStrip.SuspendLayout()
@@ -52,7 +57,7 @@ Partial Class frmBloodlines
       ' 
       ' ToolStrip
       ' 
-      ToolStrip.Items.AddRange(New ToolStripItem() {tsBtnNew, tsBtnLoad, tsBtnSep1, tsBtnMembers, tsBtnList, tsBtnTree})
+      ToolStrip.Items.AddRange(New ToolStripItem() {tsBtnNew, tsBtnLoad, tsBtnSep1, tsBtnMembers, tsBtnList, tsBtnTree, tsBtnSep2, tsBtnPrint, tsBtnExport, tsBtnSep3, tsBtnSettings})
       ToolStrip.Location = New Point(0, 0)
       ToolStrip.Name = "ToolStrip"
       ToolStrip.Size = New Size(800, 25)
@@ -108,7 +113,47 @@ Partial Class frmBloodlines
       tsBtnTree.ImageTransparentColor = Color.Magenta
       tsBtnTree.Name = "tsBtnTree"
       tsBtnTree.Size = New Size(23, 22)
-      tsBtnTree.Text = "ToolStripButton2"
+      tsBtnTree.Text = "Tree"
+      ' 
+      ' tsBtnSep2
+      ' 
+      tsBtnSep2.Name = "tsBtnSep2"
+      tsBtnSep2.Size = New Size(6, 25)
+      ' 
+      ' tsBtnPrint
+      ' 
+      tsBtnPrint.DisplayStyle = ToolStripItemDisplayStyle.Image
+      tsBtnPrint.Image = CType(resources.GetObject("tsBtnPrint.Image"), Image)
+      tsBtnPrint.ImageTransparentColor = Color.Magenta
+      tsBtnPrint.Name = "tsBtnPrint"
+      tsBtnPrint.Size = New Size(23, 22)
+      tsBtnPrint.Text = "Print"
+      tsBtnPrint.ToolTipText = "Print Tree"
+      ' 
+      ' tsBtnExport
+      ' 
+      tsBtnExport.DisplayStyle = ToolStripItemDisplayStyle.Image
+      tsBtnExport.Image = CType(resources.GetObject("tsBtnExport.Image"), Image)
+      tsBtnExport.ImageTransparentColor = Color.Magenta
+      tsBtnExport.Name = "tsBtnExport"
+      tsBtnExport.Size = New Size(23, 22)
+      tsBtnExport.Text = "Export"
+      tsBtnExport.ToolTipText = "Export Tree as Image"
+      ' 
+      ' tsBtnSep3
+      ' 
+      tsBtnSep3.Name = "tsBtnSep3"
+      tsBtnSep3.Size = New Size(6, 25)
+      ' 
+      ' tsBtnSettings
+      ' 
+      tsBtnSettings.DisplayStyle = ToolStripItemDisplayStyle.Image
+      tsBtnSettings.Image = CType(resources.GetObject("tsBtnSettings.Image"), Image)
+      tsBtnSettings.ImageTransparentColor = Color.Magenta
+      tsBtnSettings.Name = "tsBtnSettings"
+      tsBtnSettings.Size = New Size(23, 22)
+      tsBtnSettings.Text = "Settings"
+      tsBtnSettings.ToolTipText = "Settings"
       ' 
       ' pnlPlaceholder
       ' 
@@ -127,9 +172,11 @@ Partial Class frmBloodlines
       Controls.Add(pnlPlaceholder)
       Controls.Add(ToolStrip)
       Controls.Add(StatusStrip)
+      Icon = CType(resources.GetObject("$this.Icon"), Icon)
       Name = "frmBloodlines"
       StartPosition = FormStartPosition.CenterScreen
       Text = "Bloodlines"
+      WindowState = FormWindowState.Maximized
       StatusStrip.ResumeLayout(False)
       StatusStrip.PerformLayout()
       ToolStrip.ResumeLayout(False)
@@ -148,5 +195,10 @@ Partial Class frmBloodlines
    Friend WithEvents tsBtnTree As ToolStripButton
    Friend WithEvents tsBtnNew As ToolStripButton
    Friend WithEvents ssStatusLabel As ToolStripStatusLabel
+   Friend WithEvents tsBtnSep2 As ToolStripSeparator
+   Friend WithEvents tsBtnSettings As ToolStripButton
+   Friend WithEvents tsBtnPrint As ToolStripButton
+   Friend WithEvents tsBtnExport As ToolStripButton
+   Friend WithEvents tsBtnSep3 As ToolStripSeparator
 
 End Class

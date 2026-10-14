@@ -417,6 +417,7 @@ Partial Class frmPerson
       Controls.Add(txtBoxID)
       Controls.Add(lblID)
       Controls.Add(btnOk)
+      Icon = CType(resources.GetObject("$this.Icon"), Icon)
       Name = "frmPerson"
       StartPosition = FormStartPosition.CenterParent
       Text = "Person"

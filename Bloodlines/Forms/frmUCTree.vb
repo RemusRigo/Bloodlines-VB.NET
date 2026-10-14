@@ -6,6 +6,7 @@
 
 Imports System.ComponentModel
 Imports System.Drawing.Drawing2D
+Imports System.Drawing.Printing
 Imports System.IO
 Imports Bloodlines.Bloodlines
 
@@ -24,6 +25,22 @@ Public Class frmUCTree
    <DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)>
    Public Property Tree As FamilyTree
 
+   ' What the chart shows around the focus person (see TreeViewMode). Changing it
+   ' rebuilds the chart around the current focus person.
+   Private _viewMode As TreeViewMode = TreeViewMode.Normal
+   <Browsable(False)>
+   <DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)>
+   Public Property ViewMode As TreeViewMode
+      Get
+         Return _viewMode
+      End Get
+      Set(value As TreeViewMode)
+         If value = _viewMode Then Return
+         _viewMode = value
+         If _focusPerson IsNot Nothing Then SetFocus(_focusPerson)
+      End Set
+   End Property
+
    ' --- layout constants (pixels, unscaled - i.e. measured at zoom = 1.0) ---
    Private Const NodeWidth As Integer = 210     ' width of one person's card
    Private Const NodeHeight As Integer = 84     ' height of one person's card
@@ -31,7 +48,7 @@ Public Class frmUCTree
    Private Const VGap As Integer = 46           ' vertical gap between generations
    Private Const TreeMargin As Integer = 24     ' padding around the whole layout
    Private Const MaxDepth As Integer = 20       ' guard against pathological/cyclic data
-   Private Const SpouseGap As Integer = 6       ' gap between a person and their spouse box(es)
+   Private Const SpouseGap As Integer = 24      ' gap between a person and their spouse box(es) - wide enough to show a dashed/dotted couple line
    Private Const CardPad As Integer = 6         ' padding inside a person card
    Private Const PhotoWidth As Integer = 62     ' width of the photo on a card
    Private Const BadgeSize As Integer = 18      ' "open linked tree" (+) button in a card's top-right corner
@@ -66,6 +83,9 @@ Public Class frmUCTree
       Public ReadOnly Kids As New List(Of Node)         ' drawn below, connected downward
       Public ReadOnly Parents As New List(Of Node)      ' drawn above, connected upward
       Public ReadOnly Spouses As New List(Of Person)    ' drawn beside, same generation
+      Public ReadOnly SpouseTypes As New List(Of Relationship.RelationType)  ' Spouse/Divorced/Partner, parallel to Spouses
+      Public ReadOnly SpouseRepeats As New List(Of Boolean)  ' Full mode: that spouse is also drawn elsewhere, parallel to Spouses
+      Public IsRepeat As Boolean                        ' Full mode: this person is also drawn elsewhere
       Public Cx As Integer                              ' couple block centre X (content coords)
       Public Y As Integer                               ' box top Y (content coords)
       Public L As Integer                               ' subtree extent left of PrimaryCx, used only during layout
@@ -74,7 +94,12 @@ Public Class frmUCTree
 
    Private ReadOnly _byId As New Dictionary(Of Integer, Person)   ' fast Person lookup by ID
    Private ReadOnly _allNodes As New List(Of Node)                ' every node currently laid out/drawn
-   Private _focus As Node                                          ' the node currently centred/highlighted
+   Private _focus As Node                                          ' root of the hourglass layout (Nothing in Full mode)
+   Private _focusPerson As Person                                  ' the person currently centred/highlighted
+   Private ReadOnly _siblings As New List(Of Node)                 ' Siblings mode: the focus person's siblings, in the focus row
+   Private ReadOnly _roots As New List(Of Node)                    ' Full mode: top of each family line, laid out side by side
+   Private ReadOnly _forestNodes As New HashSet(Of Integer)        ' Full mode, while building: IDs that already have their own node
+   Private ReadOnly _links As New List(Of (A As Person, B As Person, Type As Relationship.RelationType))  ' Full mode: couples drawn in separate branches, joined by a long line
    Private _focusTopY As Integer                                   ' Y of the focus row, used while placing ancestors/descendants
 
    Private _nameFont As Font
@@ -82,11 +107,13 @@ Public Class frmUCTree
    Private ReadOnly _tip As New ToolTip()
    Private ReadOnly _photos As New Dictionary(Of Integer, Image)   ' person ID -> photo (Nothing = none)
    Private ReadOnly _menuIcons As New Dictionary(Of String, Image) From {
+      {"Edit", MakeMenuIcon(Color.FromArgb(90, 160, 90), "E")},
       {"Mother", MakeMenuIcon(Color.FromArgb(219, 112, 147), "M")},
       {"Father", MakeMenuIcon(Color.FromArgb(70, 130, 220), "F")},
       {"Child", MakeMenuIcon(Color.FromArgb(150, 150, 150), "C")},
       {"Sibling", MakeMenuIcon(Color.FromArgb(150, 150, 150), "S")},
-      {"Spouse", MakeMenuIcon(Color.FromArgb(180, 140, 200), "♥")}
+      {"Spouse", MakeMenuIcon(Color.FromArgb(180, 140, 200), "♥")},
+      {"Partner", MakeMenuIcon(Color.FromArgb(200, 170, 220), "P")}
    }
 
    ' Shared text layout: centred both ways, single line, ellipsis if the name/date
@@ -166,49 +193,167 @@ Public Class frmUCTree
    ' merged into one tree hanging off a single focus Node.
    Private Sub BuildNodes(focus As Person)
       _focus = Nothing
+      _focusPerson = focus
+      _siblings.Clear()
+      _roots.Clear()
+      _links.Clear()
       If focus Is Nothing Then Return
+
+      If _viewMode = TreeViewMode.Full Then
+         BuildForest(focus)
+         Return
+      End If
 
       Dim down As Node = BuildDown(focus, 0, New HashSet(Of Integer))
       Dim up As Node = BuildUp(focus, 0, New HashSet(Of Integer))
       down.Parents.AddRange(up.Parents)
       _focus = down
+
+      If _viewMode = TreeViewMode.Siblings Then BuildSiblings()
    End Sub
+
+   ' A node for p with p's partners (Spouse/Divorced/Partner) beside them, except anyone in
+   ' `skip`. With `placed` (Full mode), everyone drawn is recorded, and a person who was
+   ' already drawn elsewhere is still drawn here but flagged as a repeat.
+   Private Function NewNode(p As Person, Optional placed As HashSet(Of Integer) = Nothing,
+                            Optional skip As HashSet(Of Integer) = Nothing) As Node
+      Dim n As New Node With {.Person = p}
+      If placed IsNot Nothing Then n.IsRepeat = Not placed.Add(p.ID)
+
+      For Each r As Relationship In p.Relationships.Where(Function(x) Relationship.IsCouple(x.Type))
+         Dim spouse As Person = Nothing
+         If Not _byId.TryGetValue(r.RelativeID, spouse) Then Continue For
+         If n.Spouses.Contains(spouse) Then Continue For   ' e.g. listed as both Spouse and Divorced
+         If skip IsNot Nothing AndAlso skip.Contains(spouse.ID) Then Continue For
+         If placed IsNot Nothing AndAlso HasParents(spouse) Then
+            ' Full mode: a partner with their own family here is drawn in that family's
+            ' branch instead, and the two cards are joined by a long line (see DrawLinks).
+            If Not _links.Any(Function(l) (l.A Is p AndAlso l.B Is spouse) OrElse (l.A Is spouse AndAlso l.B Is p)) Then
+               _links.Add((p, spouse, r.Type))
+            End If
+            Continue For
+         End If
+         n.Spouses.Add(spouse)
+         n.SpouseTypes.Add(r.Type)
+         n.SpouseRepeats.Add(placed IsNot Nothing AndAlso Not placed.Add(spouse.ID))
+      Next
+      Return n
+   End Function
 
    ' Recursively builds the descendant side (p and everyone below them), plus p's spouses.
    ' `path` tracks ancestors currently being recursed through, to guard against a bad/cyclic
    ' relationship (e.g. someone accidentally listed as their own descendant) infinite-looping.
-   Private Function BuildDown(p As Person, depth As Integer, path As HashSet(Of Integer)) As Node
-      Dim n As New Node With {.Person = p}
-
-      For Each r As Relationship In p.Relationships.Where(Function(x) x.Type = Relationship.RelationType.Spouse)
-         Dim spouse As Person = Nothing
-         If _byId.TryGetValue(r.RelativeID, spouse) Then n.Spouses.Add(spouse)
-      Next
+   ' `placed` (Full mode only): see BuildForest.
+   Private Function BuildDown(p As Person, depth As Integer, path As HashSet(Of Integer),
+                              Optional placed As HashSet(Of Integer) = Nothing) As Node
+      Dim n As Node = NewNode(p, placed)
+      If placed IsNot Nothing Then _forestNodes.Add(p.ID)
 
       If depth >= MaxDepth OrElse Not path.Add(p.ID) Then Return n
 
       For Each child As Person In Tree.GetChildren(p.ID).
             OrderBy(Function(c) c.BirthDate).ThenBy(Function(c) c.ID)
-         n.Kids.Add(BuildDown(child, depth + 1, path))
+         If placed IsNot Nothing AndAlso _forestNodes.Contains(child.ID) Then Continue For
+         n.Kids.Add(BuildDown(child, depth + 1, path, placed))
       Next
 
       path.Remove(p.ID)
       Return n
    End Function
 
+   ' Siblings mode: everyone else who is a child of one of the focus person's parents
+   ' (full or half siblings). Shown with their spouses but not their descendants, and
+   ' linked to whichever of the focus's parents they share.
+   Private Sub BuildSiblings()
+      Dim seen As New HashSet(Of Integer) From {_focus.Person.ID}
+      For Each parentNode As Node In _focus.Parents
+         For Each child As Person In Tree.GetChildren(parentNode.Person.ID)
+            If Not seen.Add(child.ID) Then Continue For
+            Dim sib As Node = NewNode(child)
+            sib.Parents.AddRange(_focus.Parents.Where(Function(pn) IsChildOf(child, pn.Person.ID)))
+            _siblings.Add(sib)
+         Next
+      Next
+   End Sub
+
+   Private Shared Function IsChildOf(child As Person, parentId As Integer) As Boolean
+      Return child.Relationships.Any(Function(r) r.RelativeID = parentId AndAlso
+         (r.Type = Relationship.RelationType.Father OrElse r.Type = Relationship.RelationType.Mother))
+   End Function
+
+   ' Full mode: every person in the tree, as a row of descendant trees side by side.
+   ' The first one starts from the focus person's top-most ancestor, so their own line
+   ' comes first; then one per remaining person with no parents in the tree; then anyone
+   ' still not shown (e.g. a child whose only listed parent appears as someone's spouse).
+   ' A partner with their own parents in the tree stays in their own family's branch and
+   ' is joined to their partner by a long line (_links, see NewNode/DrawLinks); only a
+   ' partner with no family here is drawn beside them. A couple's children appear once,
+   ' under whichever parent's line is built first. Everyone gets their own box (a node) at
+   ' most once; a partner box for someone already drawn elsewhere gets a dashed border
+   ' (see Node.IsRepeat). LayoutForest shifts lines up/down to put linked couples in the same row.
+   Private Sub BuildForest(focus As Person)
+      Dim placed As New HashSet(Of Integer)       ' everyone drawn so far, as a node or as a partner
+      _forestNodes.Clear()
+      Dim addRoot = Sub(p As Person)
+                       If Not placed.Contains(p.ID) Then _roots.Add(BuildDown(p, 0, New HashSet(Of Integer), placed))
+                    End Sub
+
+      addRoot(TopAncestor(focus))
+
+      ' A parentless person married to someone who does have parents here is left for
+      ' that spouse's line to pick up, rather than starting a line of their own.
+      For Each p As Person In Tree.People.Where(Function(x) Not HasParents(x)).OrderBy(Function(x) x.ID)
+         Dim marriedIn As Boolean = p.Relationships.Any(Function(r)
+                                                           Dim sp As Person = Nothing
+                                                           Return Relationship.IsCouple(r.Type) AndAlso
+                                                                  _byId.TryGetValue(r.RelativeID, sp) AndAlso HasParents(sp)
+                                                        End Function)
+         If Not marriedIn Then addRoot(p)
+      Next
+
+      For Each p As Person In Tree.People.OrderBy(Function(x) x.ID)
+         addRoot(p)
+      Next
+   End Sub
+
+   Private Function HasParents(p As Person) As Boolean
+      Return p.Relationships.Any(Function(r) (r.Type = Relationship.RelationType.Father OrElse r.Type = Relationship.RelationType.Mother) AndAlso
+                                             _byId.ContainsKey(r.RelativeID))
+   End Function
+
+   ' Follows the first listed parent (father before mother, as in BuildUp) up to someone
+   ' with no parents in the tree. Stops early on a cycle.
+   Private Function TopAncestor(p As Person) As Person
+      Dim seen As New HashSet(Of Integer)
+      Do While seen.Add(p.ID)
+         Dim r As Relationship = p.Relationships.
+            Where(Function(x) (x.Type = Relationship.RelationType.Father OrElse x.Type = Relationship.RelationType.Mother) AndAlso
+                              _byId.ContainsKey(x.RelativeID)).
+            OrderBy(Function(x) x.Type).FirstOrDefault()
+         If r Is Nothing Then Exit Do
+         p = _byId(r.RelativeID)
+      Loop
+      Return p
+   End Function
+
    ' Recursively builds the ancestor side (p's parents, grandparents, ...).
-   ' Same cycle-guard as BuildDown.
-   Private Function BuildUp(p As Person, depth As Integer, path As HashSet(Of Integer)) As Node
-      Dim n As New Node With {.Person = p}
+   ' Same cycle-guard as BuildDown. Each ancestor is shown with their partners, except
+   ' the child's other parent (`coParents`), who's already drawn beside them as a parent -
+   ' so e.g. a grandmother's second husband appears, but not her first one twice.
+   Private Function BuildUp(p As Person, depth As Integer, path As HashSet(Of Integer),
+                            Optional coParents As HashSet(Of Integer) = Nothing) As Node
+      Dim n As Node = NewNode(p, skip:=coParents)
       If depth >= MaxDepth OrElse Not path.Add(p.ID) Then Return n
 
-      Dim added As New HashSet(Of Integer)
-      For Each r As Relationship In p.Relationships.
+      Dim parentRels As List(Of Relationship) = p.Relationships.
             Where(Function(x) x.Type = Relationship.RelationType.Father OrElse x.Type = Relationship.RelationType.Mother).
-            OrderBy(Function(x) x.Type)
+            OrderBy(Function(x) x.Type).ToList()
+      Dim parentIds As New HashSet(Of Integer)(parentRels.Select(Function(x) x.RelativeID))
+      Dim added As New HashSet(Of Integer)
+      For Each r As Relationship In parentRels
          Dim parent As Person = Nothing
          If _byId.TryGetValue(r.RelativeID, parent) AndAlso added.Add(r.RelativeID) Then
-            n.Parents.Add(BuildUp(parent, depth + 1, path))
+            n.Parents.Add(BuildUp(parent, depth + 1, path, parentIds))
          End If
       Next
 
@@ -222,10 +367,83 @@ Public Class frmUCTree
    ' with zoom, which keeps all the box/line geometry math simple.
    Private Sub LayoutNodes()
       _allNodes.Clear()
-      If _focus Is Nothing Then Return
 
       Dim kidsOf As Func(Of Node, List(Of Node)) = Function(n) n.Kids
       Dim parentsOf As Func(Of Node, List(Of Node)) = Function(n) n.Parents
+
+      If _roots.Count > 0 Then
+         LayoutForest(kidsOf)
+      ElseIf _focus IsNot Nothing Then
+         LayoutHourglass(kidsOf, parentsOf)
+      End If
+      If _allNodes.Count = 0 Then Return
+
+      ' Shift everything so the left-most box sits exactly TreeMargin pixels from content X = 0.
+      Dim minLeft As Integer = _allNodes.Min(Function(n) n.Cx - CoupleWidth(n) \ 2)
+      Dim dx As Integer = TreeMargin - minLeft
+      For Each n As Node In _allNodes
+         n.Cx += dx
+      Next
+   End Sub
+
+   ' Full mode: each root's descendant tree, left to right, all starting on the top row.
+   ' Each line starts on whatever row puts couples joined by a long line (_links) side by
+   ' side in the same generation row, where possible.
+   Private Sub LayoutForest(kidsOf As Func(Of Node, List(Of Node)))
+      _focusTopY = TreeMargin
+
+      ' which line each person's own node is in, and its generation within that line
+      Dim where As New Dictionary(Of Integer, (Root As Integer, Gen As Integer))
+      For i As Integer = 0 To _roots.Count - 1
+         MapGens(_roots(i), i, 0, where)
+      Next
+
+      ' Starting row per line: walk outward from each not-yet-placed line through the
+      ' links, shifting each newly reached line to line its partner up with the one already
+      ' placed. (With conflicting links, the first one found wins.)
+      Dim startGen As New Dictionary(Of Integer, Integer)
+      For seed As Integer = 0 To _roots.Count - 1
+         If startGen.ContainsKey(seed) Then Continue For
+         startGen(seed) = 0
+         Dim queue As New Queue(Of Integer)
+         queue.Enqueue(seed)
+         Do While queue.Count > 0
+            Dim cur As Integer = queue.Dequeue()
+            For Each lk In _links
+               Dim a, b As (Root As Integer, Gen As Integer)
+               If Not where.TryGetValue(lk.A.ID, a) OrElse Not where.TryGetValue(lk.B.ID, b) Then Continue For
+               If b.Root = cur Then
+                  Dim t = a : a = b : b = t
+               End If
+               If a.Root <> cur OrElse startGen.ContainsKey(b.Root) Then Continue For
+               startGen(b.Root) = startGen(cur) + a.Gen - b.Gen
+               queue.Enqueue(b.Root)
+            Next
+         Loop
+      Next
+      Dim topGen As Integer = startGen.Values.Min()
+
+      Dim x As Integer = 0
+      Dim seen As New HashSet(Of Node)
+      For i As Integer = 0 To _roots.Count - 1
+         Dim root As Node = _roots(i)
+         Measure(root, kidsOf, New HashSet(Of Node))
+         PlaceDown(root, x + root.L, startGen(i) - topGen)
+         x += root.L + root.R + HGap * 2   ' a wider gap between separate family lines
+         Collect(root, kidsOf, seen, _allNodes)
+      Next
+   End Sub
+
+   ' Records the generation (within its own line) of every node below `n`; first one wins.
+   Private Shared Sub MapGens(n As Node, root As Integer, gen As Integer, where As Dictionary(Of Integer, (Root As Integer, Gen As Integer)))
+      If where.ContainsKey(n.Person.ID) Then Return
+      where(n.Person.ID) = (root, gen)
+      For Each k As Node In n.Kids
+         MapGens(k, root, gen + 1, where)
+      Next
+   End Sub
+
+   Private Sub LayoutHourglass(kidsOf As Func(Of Node, List(Of Node)), parentsOf As Func(Of Node, List(Of Node)))
 
       ' First pass: measure how wide each subtree needs to be, so siblings can be
       ' spaced without overlapping.
@@ -250,11 +468,34 @@ Public Class frmUCTree
          Collect(p, parentsOf, seen, _allNodes)
       Next
 
-      ' Shift everything so the left-most box sits exactly TreeMargin pixels from content X = 0.
-      Dim minLeft As Integer = _allNodes.Min(Function(n) n.Cx - CoupleWidth(n) \ 2)
-      Dim dx As Integer = TreeMargin - minLeft
-      For Each n As Node In _allNodes
-         n.Cx += dx
+      PlaceSiblings()
+      _allNodes.AddRange(_siblings)
+   End Sub
+
+   ' Siblings mode: lines the siblings up in the focus row in birth order - older ones to
+   ' the left of the focus person, younger ones to the right of the focus couple block.
+   ' Only the focus row is shared (siblings have no descendants or ancestors of their
+   ' own drawn), so they just need to clear the focus's own couple block.
+   Private Sub PlaceSiblings()
+      If _siblings.Count = 0 Then Return
+      Dim byAge As List(Of Node) = _siblings.Append(_focus).
+         OrderBy(Function(n) n.Person.BirthDate).ThenBy(Function(n) n.Person.ID).ToList()
+      Dim at As Integer = byAge.IndexOf(_focus)
+
+      Dim edge As Integer = _focus.Cx - CoupleWidth(_focus) \ 2
+      For i As Integer = at - 1 To 0 Step -1
+         Dim n As Node = byAge(i)
+         edge -= HGap + CoupleWidth(n)
+         n.Cx = edge + CoupleWidth(n) \ 2
+         n.Y = _focus.Y
+      Next
+
+      edge = _focus.Cx + CoupleWidth(_focus) - CoupleWidth(_focus) \ 2
+      For i As Integer = at + 1 To byAge.Count - 1
+         Dim n As Node = byAge(i)
+         n.Cx = edge + HGap + CoupleWidth(n) \ 2
+         n.Y = _focus.Y
+         edge += HGap + CoupleWidth(n)
       Next
    End Sub
 
@@ -392,12 +633,36 @@ Public Class frmUCTree
    ' and whenever pnlChart is resized (see pnlChart_Resize), so the chart never
    ' drifts off-screen when the host window is resized/maximised.
    Private Sub CenterOnFocus()
-      If _focus Is Nothing Then Return
-      Dim cx As Integer = PrimaryCx(_focus)
-      Dim cy As Integer = _focus.Y + NodeHeight \ 2
+      Dim box As Rectangle? = FocusBox()
+      If Not box.HasValue Then Return
+      Dim cx As Integer = box.Value.X + NodeWidth \ 2
+      Dim cy As Integer = box.Value.Y + NodeHeight \ 2
       _panX = pnlChart.ClientSize.Width / 2.0F - cx * _zoom
       _panY = pnlChart.ClientSize.Height / 2.0F - cy * _zoom
    End Sub
+
+   ' The focus person's card, in content coordinates. In Full mode they may be drawn as
+   ' someone's spouse rather than as their own node, so search every card.
+   Private Function FocusBox() As Rectangle?
+      ' Prefer their first appearance over a repeat (Full mode draws some people twice).
+      If _focusPerson Is Nothing Then Return Nothing
+      Dim repeat As Rectangle? = Nothing
+      For Each n As Node In _allNodes
+         Dim rect As New Rectangle(n.Cx - CoupleWidth(n) \ 2, n.Y, NodeWidth, NodeHeight)
+         If n.Person Is _focusPerson Then
+            If Not n.IsRepeat Then Return rect
+            If Not repeat.HasValue Then repeat = rect
+         End If
+         For i As Integer = 0 To n.Spouses.Count - 1
+            rect = New Rectangle(rect.Right + SpouseGap, n.Y, NodeWidth, NodeHeight)
+            If n.Spouses(i) Is _focusPerson Then
+               If Not n.SpouseRepeats(i) Then Return rect
+               If Not repeat.HasValue Then repeat = rect
+            End If
+         Next
+      Next
+      Return repeat
+   End Function
 
    ' Re-centres the chart on the focus person whenever the panel's size changes -
    ' covers the host form being resized, maximised, or restored.
@@ -480,18 +745,23 @@ Public Class frmUCTree
       g.SmoothingMode = SmoothingMode.AntiAlias
       g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit
 
-      ' Everything below is drawn in unscaled content coordinates; this transform maps
-      ' it onto the screen. Order matters: translate first, then scale, so _panX/_panY
-      ' stay in screen pixels regardless of the current zoom level.
-      g.TranslateTransform(_panX, _panY)
-      g.ScaleTransform(_zoom, _zoom)
-
-      If _focus Is Nothing Then
-         g.ResetTransform() ' draw this message in plain screen coordinates, unscaled
+      If _allNodes.Count = 0 Then
+         ' drawn in plain screen coordinates, unscaled
          g.DrawString("Load a family tree, then pick a focus person.", Font, Brushes.Gray, TreeMargin, TreeMargin)
          Return
       End If
 
+      ' Everything in DrawChart is drawn in unscaled content coordinates; this transform maps
+      ' it onto the screen. Order matters: translate first, then scale, so _panX/_panY
+      ' stay in screen pixels regardless of the current zoom level.
+      g.TranslateTransform(_panX, _panY)
+      g.ScaleTransform(_zoom, _zoom)
+      DrawChart(g)
+   End Sub
+
+   ' Draws the whole chart in content coordinates - the caller sets up the transform
+   ' (screen pan/zoom, exported bitmap, or printed page).
+   Private Sub DrawChart(g As Graphics)
       ' Connector lines first, so they sit behind the boxes.
       Using pen As New Pen(Color.FromArgb(150, 150, 150), 0)
          For Each n As Node In _allNodes
@@ -499,11 +769,46 @@ Public Class frmUCTree
             DrawUpConnector(g, pen, n)
          Next
       End Using
+      DrawLinks(g)
 
       For Each n As Node In _allNodes
-         DrawCouple(g, n, n Is _focus)
+         DrawCouple(g, n)
       Next
    End Sub
+
+   ' Full mode: the long lines joining couples drawn in separate branches, in the same
+   ' solid/dashed/dotted style as a couple drawn side by side (see CouplePen).
+   Private Sub DrawLinks(g As Graphics)
+      If _links.Count = 0 Then Return
+      Dim cards As New Dictionary(Of Integer, Rectangle)   ' person ID -> their own (first) card
+      For Each n As Node In _allNodes
+         If n.IsRepeat OrElse cards.ContainsKey(n.Person.ID) Then Continue For
+         cards(n.Person.ID) = New Rectangle(n.Cx - CoupleWidth(n) \ 2, n.Y, NodeWidth, NodeHeight)
+      Next
+
+      For Each lk In _links
+         Dim a, b As Rectangle
+         If Not cards.TryGetValue(lk.A.ID, a) OrElse Not cards.TryGetValue(lk.B.ID, b) Then Continue For
+         Using pen As Pen = CouplePen(lk.Type)
+            g.DrawLines(pen, LinkPath(a, b))
+         End Using
+      Next
+   End Sub
+
+   ' Route for a long couple line: out of the top of each card (or the bottom, for the
+   ' higher card when they're in different rows), along a lane just above the lower card's
+   ' row - below the parents' connector bus - so it doesn't run through the cards in between.
+   Private Shared Function LinkPath(a As Rectangle, b As Rectangle) As Point()
+      If b.X < a.X Then
+         Dim t As Rectangle = a : a = b : b = t
+      End If
+      Dim laneY As Integer = Math.Max(a.Y, b.Y) - VGap \ 4
+      Dim xa As Integer = a.Right - NodeWidth \ 4
+      Dim xb As Integer = b.Left + NodeWidth \ 4
+      Dim ya As Integer = If(a.Y < b.Y, a.Bottom, a.Y)
+      Dim yb As Integer = If(b.Y < a.Y, b.Bottom, b.Y)
+      Return {New Point(xa, ya), New Point(xa, laneY), New Point(xb, laneY), New Point(xb, yb)}
+   End Function
 
    ' Draws the elbow connector from `n` down to each of its children, via a shared
    ' horizontal "bus" line halfway down the generation gap.
@@ -548,17 +853,18 @@ Public Class frmUCTree
 
    ' Draws the person's own box, then any spouse box(es) beside it, joined by a
    ' short horizontal "marriage" line.
-   Private Sub DrawCouple(g As Graphics, n As Node, isFocus As Boolean)
+   Private Sub DrawCouple(g As Graphics, n As Node)
       Dim left As Integer = n.Cx - CoupleWidth(n) \ 2
       Dim rect As New Rectangle(left, n.Y, NodeWidth, NodeHeight)
-      DrawBox(g, rect, n.Person, isFocus)
+      DrawBox(g, rect, n.Person, n.Person Is _focusPerson, n.IsRepeat)
 
       Dim prevRect As Rectangle = rect
-      For Each sp As Person In n.Spouses
+      For i As Integer = 0 To n.Spouses.Count - 1
+         Dim sp As Person = n.Spouses(i)
          Dim spRect As New Rectangle(prevRect.Right + SpouseGap, n.Y, NodeWidth, NodeHeight)
-         DrawBox(g, spRect, sp, False)
+         DrawBox(g, spRect, sp, sp Is _focusPerson, n.SpouseRepeats(i))
 
-         Using pen As New Pen(Color.FromArgb(150, 150, 150), 0)
+         Using pen As Pen = CouplePen(n.SpouseTypes(i))
             Dim midY As Integer = n.Y + NodeHeight \ 2
             g.DrawLine(pen, prevRect.Right, midY, spRect.Left, midY)
          End Using
@@ -566,9 +872,25 @@ Public Class frmUCTree
       Next
    End Sub
 
+   ' The line joining a couple: solid for Spouse, dashed (- - -) for Divorced, dotted (. . .)
+   ' for Partner. The patterned pens are 1.5 wide rather than cosmetic (width 0), so the
+   ' dashes/dots scale with the zoom like the boxes do and stay readable.
+   Private Shared Function CouplePen(type As Relationship.RelationType) As Pen
+      Dim color As Color = Color.FromArgb(150, 150, 150)
+      Select Case type
+         Case Relationship.RelationType.Divorced
+            Return New Pen(color, 1.5F) With {.DashPattern = {3.0F, 2.0F}}   ' in pen widths: 4.5px dash, 3px gap
+         Case Relationship.RelationType.Partner
+            Return New Pen(color, 1.5F) With {.DashPattern = {1.0F, 2.0F}}   ' 1.5px dot, 3px gap
+         Case Else
+            Return New Pen(color, 0)
+      End Select
+   End Function
+
    ' A person "card": photo on the left; first name, last name and (born - died) on the right.
    ' The focus person gets a heavier blue outline.
-   Private Sub DrawBox(g As Graphics, rect As Rectangle, person As Person, isFocus As Boolean)
+   ' A repeat (Full mode: this person is also drawn elsewhere) gets a dashed border.
+   Private Sub DrawBox(g As Graphics, rect As Rectangle, person As Person, isFocus As Boolean, Optional isRepeat As Boolean = False)
       ' background tint by sex (blue = male, pink = female, grey = not specified), fading lighter toward the top
       Dim fill As Color
       Select Case person.Sex
@@ -586,13 +908,16 @@ Public Class frmUCTree
          ' ~2 screen pixels thick regardless of zoom level (the Graphics transform
          ' otherwise scales pen widths along with everything else).
          Using pen As New Pen(Color.FromArgb(33, 102, 172), 2 / _zoom)
+            If isRepeat Then pen.DashStyle = DashStyle.Dash
             g.DrawRectangle(pen, rect)
          End Using
       Else
          ' Width 0 = a GDI+ "cosmetic" pen: always exactly 1 device pixel wide,
          ' unaffected by the world transform, so thin borders don't vanish when
-         ' zoomed out or turn blurry when zoomed in.
-         Using pen As New Pen(Color.FromArgb(120, 120, 120), 0)
+         ' zoomed out or turn blurry when zoomed in. A repeat's dashed border is
+         ' 1.5 wide instead, so its dashes scale with the zoom like the couple lines.
+         Using pen As New Pen(Color.FromArgb(120, 120, 120), If(isRepeat, 1.5F, 0))
+            If isRepeat Then pen.DashPattern = {3.0F, 2.0F}
             g.DrawRectangle(pen, rect)
          End Using
       End If
@@ -782,11 +1107,14 @@ Public Class frmUCTree
       Dim hasMother As Boolean = p.Relationships.Any(Function(r) r.Type = Relationship.RelationType.Mother)
 
       Dim menu As New ContextMenuStrip()
+      menu.Items.Add("Edit", _menuIcons("Edit"), Sub() RunDeferred(Sub() EditPerson(p)))
+      menu.Items.Add(New ToolStripSeparator())
       menu.Items.Add("Add Mother", _menuIcons("Mother"), Sub() RunDeferred(Sub() AddMother(p))).Enabled = Not hasMother
       menu.Items.Add("Add Father", _menuIcons("Father"), Sub() RunDeferred(Sub() AddFather(p))).Enabled = Not hasFather
       menu.Items.Add("Add Child", _menuIcons("Child"), Sub() RunDeferred(Sub() AddChild(p)))
       menu.Items.Add("Add Sibling", _menuIcons("Sibling"), Sub() RunDeferred(Sub() AddSibling(p)))
-      menu.Items.Add("Add Spouse", _menuIcons("Spouse"), Sub() RunDeferred(Sub() AddSpouse(p)))
+      menu.Items.Add("Add Spouse", _menuIcons("Spouse"), Sub() RunDeferred(Sub() AddSpouse(p, Relationship.RelationType.Spouse)))
+      menu.Items.Add("Add Partner", _menuIcons("Partner"), Sub() RunDeferred(Sub() AddSpouse(p, Relationship.RelationType.Partner)))
       Return menu
    End Function
 
@@ -823,10 +1151,11 @@ Public Class frmUCTree
       AddRelative(p, Sub(np) p.Relationships.Add(New Relationship With {.RelativeID = np.ID, .Type = Relationship.RelationType.Father}))
    End Sub
 
-   Private Sub AddSpouse(p As Person)
+   ' Adds a new person linked to p as a couple - `type` is Spouse or Partner.
+   Private Sub AddSpouse(p As Person, type As Relationship.RelationType)
       AddRelative(p, Sub(np)
-                        p.Relationships.Add(New Relationship With {.RelativeID = np.ID, .Type = Relationship.RelationType.Spouse})
-                        np.Relationships.Add(New Relationship With {.RelativeID = p.ID, .Type = Relationship.RelationType.Spouse})
+                        p.Relationships.Add(New Relationship With {.RelativeID = np.ID, .Type = type})
+                        np.Relationships.Add(New Relationship With {.RelativeID = p.ID, .Type = type})
                      End Sub)
    End Sub
 
@@ -855,6 +1184,17 @@ Public Class frmUCTree
                      End Sub)
    End Sub
 
+   ' Opens frmPerson on an existing person, then redraws the chart so name/sex/date
+   ' edits show up. The view stays centred on the current focus, not on whoever was edited.
+   Private Sub EditPerson(p As Person)
+      frmPerson.Tree = Tree
+      frmPerson.FocusID = p.ID
+      frmPerson.ShowDialog(Me)
+
+      RebuildIndex()
+      SetFocus(If(_focusPerson, p))
+   End Sub
+
    ' Creates a blank person, wires up `link` (their relationship to `anchor`), saves,
    ' then opens frmPerson on the new person so its details can be filled in.
    Private Sub AddRelative(anchor As Person, link As Action(Of Person))
@@ -867,13 +1207,17 @@ Public Class frmUCTree
       frmPerson.FocusID = np.ID
       frmPerson.ShowDialog(Me)
 
-      ' the new person (and anyone added via frmPerson's own Connections list while
-      ' it was open) needs to be in _byId before the chart can draw links to them
+      RebuildIndex()
+      SetFocus(anchor)
+   End Sub
+
+   ' Anyone added via frmPerson's own Connections list while it was open needs to be
+   ' in _byId before the chart can draw links to them.
+   Private Sub RebuildIndex()
       _byId.Clear()
       For Each person As Person In Tree.People
          _byId(person.ID) = person
       Next
-      SetFocus(anchor)
    End Sub
 
    ' Builds the multi-line tooltip text shown on hover.
@@ -891,6 +1235,118 @@ Public Class frmUCTree
          lines.Add(p.Notes.Trim())
       End If
       Return String.Join(Environment.NewLine, lines)
+   End Function
+
+   ' ------------------------------------------------------- print / export ---
+
+   ' Printing never shrinks the chart below this; a tree that would need a smaller scale
+   ' to fit one page is printed at this scale instead, tiled across several pages.
+   Private Const MinPrintScale As Single = 0.5F
+
+   ' True once there is something on the chart to print/export.
+   <Browsable(False)>
+   Public ReadOnly Property HasChart As Boolean
+      Get
+         Return _allNodes.Count > 0
+      End Get
+   End Property
+
+   ' Bounding box of every card, in content coordinates, plus the usual margin.
+   Private Function ContentBounds() As Rectangle
+      Dim r As Rectangle = Rectangle.Empty
+      For Each n As Node In _allNodes
+         Dim box As New Rectangle(n.Cx - CoupleWidth(n) \ 2, n.Y, CoupleWidth(n), NodeHeight)
+         r = If(r.IsEmpty, box, Rectangle.Union(r, box))
+      Next
+      r.Inflate(TreeMargin, TreeMargin)
+      Return r
+   End Function
+
+   ' Export: the whole chart (not just the visible part) at the current zoom level,
+   ' so the image is exactly as big as the chart would be on screen if it all fit.
+   ' Capped so a huge tree zoomed in can't exceed what GDI+ / memory can handle.
+   Private Const MaxExportSide As Integer = 30000      ' pixels, per side
+   Private Const MaxExportPixels As Long = 200_000_000 ' ~800 MB at 32 bpp
+
+   Public Function RenderChart() As Bitmap
+      Dim bounds As Rectangle = ContentBounds()
+      Dim scale As Single = _zoom
+      scale = Math.Min(scale, MaxExportSide / CSng(bounds.Width))
+      scale = Math.Min(scale, MaxExportSide / CSng(bounds.Height))
+      scale = Math.Min(scale, CSng(Math.Sqrt(MaxExportPixels / (CDbl(bounds.Width) * bounds.Height))))
+
+      Dim bmp As New Bitmap(Math.Max(1, CInt(Math.Ceiling(bounds.Width * scale))),
+                            Math.Max(1, CInt(Math.Ceiling(bounds.Height * scale))))
+      Using g As Graphics = Graphics.FromImage(bmp)
+         g.Clear(pnlChart.BackColor)
+         g.SmoothingMode = SmoothingMode.AntiAlias
+         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit ' ClearType looks fringed in a saved image
+         g.ScaleTransform(scale, scale)
+         g.TranslateTransform(-bounds.Left, -bounds.Top)
+         DrawChart(g)
+      End Using
+      Return bmp
+   End Function
+
+   ' Print: the whole chart (not just the visible part). Fits one page when it can do so
+   ' at MinPrintScale or larger (never enlarged past 100%); otherwise it is tiled across
+   ' pages, left to right then top to bottom. The caller owns (and disposes) the document.
+   Public Function CreatePrintDocument(title As String) As PrintDocument
+      Dim doc As New PrintDocument With {.DocumentName = title}
+      Dim bounds As Rectangle = ContentBounds()
+      doc.DefaultPageSettings.Landscape = bounds.Width > bounds.Height
+
+      ' pagination, worked out on the first page (the page size isn't known before then)
+      Dim page As Integer, cols As Integer, rows As Integer, scale As Single
+
+      AddHandler doc.BeginPrint, Sub(sender As Object, e As PrintEventArgs) page = 0 ' preview and print each run the pages from the start
+
+      AddHandler doc.PrintPage,
+         Sub(sender As Object, e As PrintPageEventArgs)
+            Dim g As Graphics = e.Graphics
+            Dim mb As Rectangle = e.MarginBounds ' 1/100 inch; 1 content pixel = 1/100 inch at 100%
+            g.SmoothingMode = SmoothingMode.AntiAlias
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit
+
+            ' header line: title on the left, page number on the right
+            Dim headerHeight As Integer
+            Using f As New Font(Font.FontFamily, 12, FontStyle.Bold)
+               headerHeight = CInt(g.MeasureString("Ag", f).Height) + 8
+               g.DrawString(title, f, Brushes.Black, mb.Left, mb.Top)
+               If page = 0 Then
+                  Dim areaW As Single = mb.Width, areaH As Single = mb.Height - headerHeight
+                  scale = Math.Min(1.0F, Math.Min(areaW / bounds.Width, areaH / bounds.Height))
+                  If scale < MinPrintScale Then scale = MinPrintScale
+                  cols = CInt(Math.Ceiling(bounds.Width * scale / areaW))
+                  rows = CInt(Math.Ceiling(bounds.Height * scale / areaH))
+               End If
+               If cols * rows > 1 Then
+                  Dim pageText As String = $"Page {page + 1} of {cols * rows}"
+                  Dim w As Single = g.MeasureString(pageText, f).Width
+                  g.DrawString(pageText, f, Brushes.Black, mb.Right - w, mb.Top)
+               End If
+            End Using
+            Dim area As New Rectangle(mb.Left, mb.Top + headerHeight, mb.Width, mb.Height - headerHeight)
+
+            ' which slice of the chart this page shows (content coords)
+            Dim tileW As Single = area.Width / scale, tileH As Single = area.Height / scale
+            Dim col As Integer = page Mod cols, row As Integer = page \ cols
+            Dim originX As Single = bounds.Left + col * tileW
+            Dim originY As Single = bounds.Top + row * tileH
+            Dim offX As Single = area.Left, offY As Single = area.Top
+            If cols = 1 Then offX += (area.Width - bounds.Width * scale) / 2 ' centre a chart that fits
+            If rows = 1 Then offY += (area.Height - bounds.Height * scale) / 2
+
+            g.SetClip(area) ' keep neighbouring tiles' content out of the header/margins
+            g.TranslateTransform(offX, offY)
+            g.ScaleTransform(scale, scale)
+            g.TranslateTransform(-originX, -originY)
+            DrawChart(g)
+
+            page += 1
+            e.HasMorePages = page < cols * rows
+         End Sub
+      Return doc
    End Function
 
    ' Panel with double buffering so a large chart repaints without flicker while

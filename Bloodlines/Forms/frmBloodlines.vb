@@ -5,6 +5,7 @@
 '--------------------------------------------------------------------------------------------------
 
 Imports System.ComponentModel
+Imports System.Drawing.Imaging
 Imports System.IO
 Imports Bloodlines.Bloodlines
 Imports Bloodlines.API
@@ -20,6 +21,7 @@ Public Class frmBloodlines
    Public Property jsonTreePath As String
 
    Private lastForm As Control
+   Private ReadOnly settings As New AppSettings()
 
    Dim lstTrees As ListBox = New ListBox()
 
@@ -52,17 +54,23 @@ Public Class frmBloodlines
          lastForm.Dispose()
          lastForm = Nothing
       End If
+      ' print/export only apply to the tree chart
+      tsBtnPrint.Enabled = False
+      tsBtnExport.Enabled = False
    End Sub
 
    '-----------------------------------------------------------------------------------------------
    ' frmBloodlines: OnLoad
    Private Sub frmBloodlines_Load(sender As Object, e As EventArgs) Handles MyBase.Load
       Me.Text = AppData.appTitle
+      settings.LoadSettings()
 
       ' disable buttons
       tsBtnMembers.Enabled = False
       tsBtnList.Enabled = False
       tsBtnTree.Enabled = False
+      tsBtnPrint.Enabled = False
+      tsBtnExport.Enabled = False
 
       ' Initialize list trees
       lstTrees.Left = 3
@@ -166,11 +174,54 @@ Public Class frmBloodlines
       ClearPlaceholder()
       If Not EnsureTree() Then Return
       Me.Text = AppData.appTitle & " [" & Tree.Name & " Tree]"   ' here, so a linked tree updates the title too
-      Dim frmChild As New frmUCTree With {.Dock = DockStyle.Fill, .Tree = Me.Tree}
+      Dim frmChild As New frmUCTree With {.Dock = DockStyle.Fill, .Tree = Me.Tree, .ViewMode = settings.ViewMode}
       AddHandler frmChild.OpenTreeRequested, AddressOf frmUCTree_OpenTreeRequested
       pnlPlaceholder.Controls.Add(frmChild)
       frmChild.Show()
       lastForm = frmChild
+      tsBtnPrint.Enabled = True
+      tsBtnExport.Enabled = True
+   End Sub
+
+   '-----------------------------------------------------------------------------------------------
+   ' tsBtnPrint: OnClick: Print the tree chart (whole tree, one page or tiled across pages)
+   Private Sub tsBtnPrint_Click(sender As Object, e As EventArgs) Handles tsBtnPrint.Click
+      Dim chart As frmUCTree = TryCast(lastForm, frmUCTree)
+      If chart Is Nothing OrElse Not chart.HasChart Then Return
+
+      Using doc = chart.CreatePrintDocument(Tree.Name & " Tree")
+         Using dlgPrint As New PrintDialog With {.Document = doc, .UseEXDialog = True}
+            If dlgPrint.ShowDialog(Me) <> DialogResult.OK Then Return
+         End Using
+         Using dlgPreview As New PrintPreviewDialog With {.Document = doc, .WindowState = FormWindowState.Maximized}
+            dlgPreview.ShowDialog(Me)
+         End Using
+      End Using
+   End Sub
+
+   '-----------------------------------------------------------------------------------------------
+   ' tsBtnExport: OnClick: Export the whole tree chart (at the current zoom) as PNG or JPG
+   Private Sub tsBtnExport_Click(sender As Object, e As EventArgs) Handles tsBtnExport.Click
+      Dim chart As frmUCTree = TryCast(lastForm, frmUCTree)
+      If chart Is Nothing OrElse Not chart.HasChart Then Return
+
+      Using dlg As New SaveFileDialog With {
+         .Title = "Export tree",
+         .Filter = "PNG image (*.png)|*.png|JPEG image (*.jpg)|*.jpg",
+         .FileName = Tree.Name & " Tree",
+         .AddExtension = True}
+         If dlg.ShowDialog(Me) <> DialogResult.OK Then Return
+
+         Dim fmt As ImageFormat = If(dlg.FilterIndex = 2, ImageFormat.Jpeg, ImageFormat.Png)
+         Try
+            Using bmp As Bitmap = chart.RenderChart()
+               bmp.Save(dlg.FileName, fmt)
+               ssStatusLabel.Text = $"Exported {bmp.Width} x {bmp.Height} px to {dlg.FileName}"
+            End Using
+         Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException OrElse TypeOf ex Is Runtime.InteropServices.ExternalException
+            MessageBox.Show(ex.Message, "Export tree", MessageBoxButtons.OK, MessageBoxIcon.Error)
+         End Try
+      End Using
    End Sub
 
    '-----------------------------------------------------------------------------------------------
@@ -217,6 +268,16 @@ Public Class frmBloodlines
       frmPerson.Tree = Tree
       frmPerson.newID = False
       frmPerson.ShowDialog()
+   End Sub
+
+   '-----------------------------------------------------------------------------------------------
+   ' Settings
+   Private Sub tsBtnSettings_Click(sender As Object, e As EventArgs) Handles tsBtnSettings.Click
+      frmSettings.Settings = settings
+      If frmSettings.ShowDialog(Me) <> DialogResult.OK Then Return
+      settings.SaveSettings()
+      Dim chart As frmUCTree = TryCast(lastForm, frmUCTree)
+      If chart IsNot Nothing Then chart.ViewMode = settings.ViewMode
    End Sub
 
    '-----------------------------------------------------------------------------------------------

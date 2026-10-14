@@ -37,8 +37,7 @@ Namespace Bloodlines
       <JsonIgnore>
       Public ReadOnly Property Name As String
          Get
-            Return If(String.IsNullOrEmpty(SourcePath), Nothing,
-                      Path.GetFileNameWithoutExtension(SourcePath))
+            Return If(String.IsNullOrEmpty(SourcePath), Nothing, Path.GetFileNameWithoutExtension(SourcePath))
          End Get
       End Property
 

@@ -16,6 +16,9 @@
     <Compile Update="Forms\frmPerson.vb">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="Forms\frmSettings.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="Forms\frmUCTree.vb">
       <SubType>UserControl</SubType>
     </Compile>

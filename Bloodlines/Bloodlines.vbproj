@@ -15,6 +15,7 @@
    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
    <BaseOutputPath>..\bin\</BaseOutputPath>
    <BaseIntermediateOutputPath>obj\</BaseIntermediateOutputPath>
+   <ApplicationIcon>Res\Bloodlines v3.ico</ApplicationIcon>
 </PropertyGroup>
 
 <PropertyGroup Condition="'$(TargetFramework)'=='net8.0-windows' AND '$(Configuration)|$(Platform)'=='Debug|x86'">
@@ -50,6 +51,9 @@
    <OutputPath>..\bin\Release\net10.0 x64\</OutputPath>
    <IntermediateOutputPath>obj\Release\net10.0 x64\</IntermediateOutputPath>
 </PropertyGroup>
+<ItemGroup>
+  <Content Include="Res\Bloodlines v3.ico" />
+</ItemGroup>
 
 
   <ItemGroup>
@@ -69,6 +73,11 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Update="My Project\Settings.Designer.vb">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
   </ItemGroup>
 
   <ItemGroup>
@@ -83,6 +92,11 @@
     <None Update="My Project\Application.myapp">
       <Generator>MyApplicationCodeGenerator</Generator>
       <LastGenOutput>Application.Designer.vb</LastGenOutput>
+    </None>
+    <None Update="My Project\Settings.settings">
+      <CustomToolNamespace>My</CustomToolNamespace>
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.vb</LastGenOutput>
     </None>
   </ItemGroup>
 

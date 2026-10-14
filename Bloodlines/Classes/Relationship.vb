@@ -11,10 +11,18 @@ Namespace Bloodlines
          Father
          Mother
          Spouse
+         Divorced    ' former spouse
+         Partner     ' together, not married
       End Enum
 
       Public Property RelativeID As Integer    ' who this points to
       Public Property Type As RelationType     ' what RelativeID is to me
+
+      ' Spouse, Divorced and Partner all link a couple: stored on both people and drawn
+      ' side by side in the chart. (A Shared function, not a property, so it isn't saved to the JSON.)
+      Public Shared Function IsCouple(type As RelationType) As Boolean
+         Return type = RelationType.Spouse OrElse type = RelationType.Divorced OrElse type = RelationType.Partner
+      End Function
 
    End Class
 

@@ -55,7 +55,9 @@ Public Class frmListMembers
 
          item.SubItems.Add(NameFor(ft, p, Relationship.RelationType.Father))
          item.SubItems.Add(NameFor(ft, p, Relationship.RelationType.Mother))
-         item.SubItems.Add(String.Join(", ", NamesFor(ft, p, Relationship.RelationType.Spouse)))
+         item.SubItems.Add(String.Join(", ", NamesFor(ft, p, Relationship.RelationType.Spouse).
+                                             Concat(NamesFor(ft, p, Relationship.RelationType.Partner).Select(Function(s) s & " (partner)")).
+                                             Concat(NamesFor(ft, p, Relationship.RelationType.Divorced).Select(Function(s) s & " (divorced)"))))
 
          item.Tag = p
          lvMembers.Items.Add(item)

@@ -327,18 +327,24 @@ Public Class frmPerson
          MessageBox.Show("That connection already exists.")
          Return
       End If
+      ' a couple is Spouse, Divorced or Partner - only one of those at a time
+      Dim couple As Relationship = self.Relationships.FirstOrDefault(Function(r) r.RelativeID = sel.Person.ID AndAlso Relationship.IsCouple(r.Type))
+      If Relationship.IsCouple(relType) AndAlso couple IsNot Nothing Then
+         MessageBox.Show($"These two are already connected as {couple.Type}. Remove that first to change it.")
+         Return
+      End If
       ' one father and one mother at most (the tree's context menu enforces the same)
-      If relType <> Relationship.RelationType.Spouse AndAlso self.Relationships.Any(Function(r) r.Type = relType) Then
+      If Not Relationship.IsCouple(relType) AndAlso self.Relationships.Any(Function(r) r.Type = relType) Then
          MessageBox.Show($"This person already has a {relType}. Remove it first to change it.")
          Return
       End If
 
       self.Relationships.Add(New Relationship With {.RelativeID = sel.Person.ID, .Type = relType})
 
-      ' keep spouse links symmetric
-      If relType = Relationship.RelationType.Spouse Then
-         If Not sel.Person.Relationships.Any(Function(r) r.RelativeID = self.ID AndAlso r.Type = Relationship.RelationType.Spouse) Then
-            sel.Person.Relationships.Add(New Relationship With {.RelativeID = self.ID, .Type = Relationship.RelationType.Spouse})
+      ' keep couple links symmetric
+      If Relationship.IsCouple(relType) Then
+         If Not sel.Person.Relationships.Any(Function(r) r.RelativeID = self.ID AndAlso r.Type = relType) Then
+            sel.Person.Relationships.Add(New Relationship With {.RelativeID = self.ID, .Type = relType})
          End If
       End If
 
@@ -353,10 +359,10 @@ Public Class frmPerson
       Dim self As Person = Tree.People(currentID)
       self.Relationships.Remove(item.Relationship)
 
-      If item.Relationship.Type = Relationship.RelationType.Spouse Then
+      If Relationship.IsCouple(item.Relationship.Type) Then
          Dim other As Person = Tree.People.FirstOrDefault(Function(p) p.ID = item.Relationship.RelativeID)
          If other IsNot Nothing Then
-            other.Relationships.RemoveAll(Function(r) r.RelativeID = self.ID AndAlso r.Type = Relationship.RelationType.Spouse)
+            other.Relationships.RemoveAll(Function(r) r.RelativeID = self.ID AndAlso r.Type = item.Relationship.Type)
          End If
       End If
 
