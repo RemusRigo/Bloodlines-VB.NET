@@ -22,7 +22,6 @@ Partial Class frmSettings
    'Do not modify it using the code editor.
    <System.Diagnostics.DebuggerStepThrough()> _
    Private Sub InitializeComponent()
-      Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(frmSettings))
       grpTreeViewMode = New GroupBox()
       rBtnFullTree = New RadioButton()
       rBtnSiblings = New RadioButton()
@@ -92,7 +91,6 @@ Partial Class frmSettings
       Controls.Add(btnOk)
       Controls.Add(grpTreeViewMode)
       DoubleBuffered = True
-      Icon = CType(resources.GetObject("$this.Icon"), Icon)
       MaximizeBox = False
       MinimizeBox = False
       Name = "frmSettings"

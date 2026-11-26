@@ -63,6 +63,17 @@ Public Class frmBloodlines
    ' frmBloodlines: OnLoad
    Private Sub frmBloodlines_Load(sender As Object, e As EventArgs) Handles MyBase.Load
       Me.Text = AppData.appTitle
+
+      ' icon and toolbar images: loaded from the exe / embedded PNGs (no binary resources in the .resx, needed for net48)
+      Me.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath)
+      tsBtnNew.Image = frmAbout.LoadImage("New.png")
+      tsBtnLoad.Image = frmAbout.LoadImage("Open.png")
+      tsBtnMembers.Image = frmAbout.LoadImage("Person.png")
+      tsBtnList.Image = frmAbout.LoadImage("ListMembers.png")
+      tsBtnTree.Image = frmAbout.LoadImage("Tree.png")
+      tsBtnSettings.Image = frmAbout.LoadImage("Settings.png")
+      tsBtnPrint.Image = frmAbout.LoadImage("Print.png")
+      tsBtnExport.Image = frmAbout.LoadImage("Export.png")
       settings.LoadSettings()
 
       ' disable buttons
@@ -114,8 +125,9 @@ Public Class frmBloodlines
          Return
       End If
 
-      Tree = New FamilyTree(treeName)
-      Tree.Save()      ' create the file now, so it shows up in Load and can be linked to
+      Dim newTree As New FamilyTree(treeName)
+      If Not newTree.TrySave() Then Return   ' create the file now, so it shows up in Load and can be linked to
+      Tree = newTree
       jsonTreePath = Tree.SourcePath
       ssStatusLabel.Text = $"Created {Tree.Name}."
 
@@ -137,13 +149,6 @@ Public Class frmBloodlines
             lstTrees.Items.Add(Path.GetFileNameWithoutExtension(f))
          Next
       End If
-   End Sub
-
-   '-----------------------------------------------------------------------------------------------
-   ' tsBtnSave: OnClick: Save the current tree
-   Private Sub tsBtnSave_Click(sender As Object, e As EventArgs)
-      If Not EnsureTree() Then Return
-      Tree.Save()
    End Sub
 
    '-----------------------------------------------------------------------------------------------

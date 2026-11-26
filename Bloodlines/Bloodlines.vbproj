@@ -1,60 +1,54 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <StartupObject>Sub Main</StartupObject>
-    <UseWindowsForms>true</UseWindowsForms>
-    <MyType>WindowsForms</MyType>
-    <OptionStrict>On</OptionStrict>
-  </PropertyGroup>
-
-  <PropertyGroup>
-   <Platforms>x64;x86</Platforms>
-   <TargetFrameworks>net8.0-windows;net10.0-windows</TargetFrameworks>
+<PropertyGroup>
    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-   <BaseOutputPath>..\bin\</BaseOutputPath>
-   <BaseIntermediateOutputPath>obj\</BaseIntermediateOutputPath>
+   <AssemblyName>Bloodlines</AssemblyName>
+   <MyType>WindowsForms</MyType>
+   <OptionStrict>On</OptionStrict>
+   <OutputType>WinExe</OutputType>
+   <Platforms>x86;x64</Platforms>
+   <RootNamespace>Bloodlines</RootNamespace>
+   <StartupObject>Sub Main</StartupObject>
+   <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+   <TargetFrameworks Condition="'$(BuildingInsideVisualStudio)' == 'true'">net10.0-windows</TargetFrameworks>
+   <UseWindowsForms>true</UseWindowsForms>
    <ApplicationIcon>Res\Bloodlines v3.ico</ApplicationIcon>
 </PropertyGroup>
 
-<PropertyGroup Condition="'$(TargetFramework)'=='net8.0-windows' AND '$(Configuration)|$(Platform)'=='Debug|x86'">
-   <OutputPath>..\bin\Debug\net8.0 x86\</OutputPath>
-   <IntermediateOutputPath>obj\Debug\net8.0 x86\</IntermediateOutputPath>
-</PropertyGroup>
-<PropertyGroup Condition="'$(TargetFramework)'=='net8.0-windows' AND '$(Configuration)|$(Platform)'=='Debug|x64'">
-   <OutputPath>..\bin\Debug\net8.0 x64\</OutputPath>
-   <IntermediateOutputPath>obj\Debug\net8.0 x64\</IntermediateOutputPath>
-</PropertyGroup>
-<PropertyGroup Condition="'$(TargetFramework)'=='net8.0-windows' AND '$(Configuration)|$(Platform)'=='Release|x86'">
-   <OutputPath>..\bin\Release\net8.0 x86\</OutputPath>
-   <IntermediateOutputPath>obj\Release\net8.0 x86\</IntermediateOutputPath>
-</PropertyGroup>
-<PropertyGroup Condition="'$(TargetFramework)'=='net8.0-windows' AND '$(Configuration)|$(Platform)'=='Release|x64'">
-   <OutputPath>..\bin\Release\net8.0 x64\</OutputPath>
-   <IntermediateOutputPath>obj\Release\net8.0 x64\</IntermediateOutputPath>
+<PropertyGroup Condition="'$(TargetFramework)' != ''">
+   <TfmName>$(TargetFramework.Replace('-windows', ''))</TfmName>
+   <OutputPath>..\bin\$(Configuration)\$(TfmName) $(Platform)\</OutputPath>
+   <IntermediateOutputPath>obj\$(Configuration)\$(TfmName) $(Platform)\</IntermediateOutputPath>
 </PropertyGroup>
 
-<PropertyGroup Condition="'$(TargetFramework)'=='net10.0-windows' AND '$(Configuration)|$(Platform)'=='Debug|x86'">
-   <OutputPath>..\bin\Debug\net10.0 x86\</OutputPath>
-   <IntermediateOutputPath>obj\Debug\net10.0 x86\</IntermediateOutputPath>
+<PropertyGroup Condition="'$(Platform)' == 'x86' Or '$(Platform)' == 'x64'">
+   <PlatformTarget>$(Platform)</PlatformTarget>
 </PropertyGroup>
-<PropertyGroup Condition="'$(TargetFramework)'=='net10.0-windows' AND '$(Configuration)|$(Platform)'=='Debug|x64'">
-   <OutputPath>..\bin\Debug\net10.0 x64\</OutputPath>
-   <IntermediateOutputPath>obj\Debug\net10.0 x64\</IntermediateOutputPath>
-</PropertyGroup>
-<PropertyGroup Condition="'$(TargetFramework)'=='net10.0-windows' AND '$(Configuration)|$(Platform)'=='Release|x86'">
-   <OutputPath>..\bin\Release\net10.0 x86\</OutputPath>
-   <IntermediateOutputPath>obj\Release\net10.0 x86\</IntermediateOutputPath>
-</PropertyGroup>
-<PropertyGroup Condition="'$(TargetFramework)'=='net10.0-windows' AND '$(Configuration)|$(Platform)'=='Release|x64'">
-   <OutputPath>..\bin\Release\net10.0 x64\</OutputPath>
-   <IntermediateOutputPath>obj\Release\net10.0 x64\</IntermediateOutputPath>
-</PropertyGroup>
+
+<ItemGroup>
+   <EmbeddedResource Include="Res\PayPal.png" LogicalName="PayPal.png" />
+   <EmbeddedResource Include="Res\Revolut.png" LogicalName="Revolut.png" />
+   <EmbeddedResource Include="Res\New.png" LogicalName="New.png" />
+   <EmbeddedResource Include="Res\Open.png" LogicalName="Open.png" />
+   <EmbeddedResource Include="Res\Person.png" LogicalName="Person.png" />
+   <EmbeddedResource Include="Res\ListMembers.png" LogicalName="ListMembers.png" />
+   <EmbeddedResource Include="Res\Tree.png" LogicalName="Tree.png" />
+   <EmbeddedResource Include="Res\Print.png" LogicalName="Print.png" />
+   <EmbeddedResource Include="Res\Export.png" LogicalName="Export.png" />
+   <EmbeddedResource Include="Res\Settings.png" LogicalName="Settings.png" />
+   <EmbeddedResource Include="Res\Prev.png" LogicalName="Prev.png" />
+   <EmbeddedResource Include="Res\Next.png" LogicalName="Next.png" />
+   <EmbeddedResource Include="Res\Add.png" LogicalName="Add.png" />
+</ItemGroup>
+
+<!-- .NET Framework 4.8 has no built-in System.Text.Json; the NuGet package writes/reads the exact same JSON -->
+<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+   <PackageReference Include="System.Text.Json" Version="8.0.5" />
+</ItemGroup>
+
 <ItemGroup>
   <Content Include="Res\Bloodlines v3.ico" />
 </ItemGroup>
-
 
   <ItemGroup>
     <Import Include="System.Data" />

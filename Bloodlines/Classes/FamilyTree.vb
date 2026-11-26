@@ -56,6 +56,7 @@ Namespace Bloodlines
       ' Photos live in a folder named after the tree, next to the tree file:
       '   <StartupPath>\Trees\<tree name>\<person ID>.jpg  (SavePhoto always writes .png, so it wins over an older .jpg)
       Private Shared ReadOnly PhotoExtensions() As String = {".png", ".jpg", ".jpeg", ".bmp"}
+      Private Const MaxPhotoHeight As Integer = 600   ' SavePhoto downscales taller pictures to this
 
       <JsonIgnore>
       Public ReadOnly Property PhotoFolder As String
@@ -88,7 +89,28 @@ Namespace Bloodlines
 
          Using fs As New FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.Read)
             Using img As Image = Image.FromStream(fs)
-               img.Save(dest, System.Drawing.Imaging.ImageFormat.Png)
+               ' Phone cameras save the picture unrotated plus an EXIF "orientation" tag; apply it,
+               ' since the PNG we write has no such tag and would otherwise show up sideways.
+               Const ExifOrientation As Integer = &H112
+               If img.PropertyIdList.Contains(ExifOrientation) Then
+                  Select Case img.GetPropertyItem(ExifOrientation).Value(0)
+                     Case 3 : img.RotateFlip(RotateFlipType.Rotate180FlipNone)
+                     Case 6 : img.RotateFlip(RotateFlipType.Rotate90FlipNone)
+                     Case 8 : img.RotateFlip(RotateFlipType.Rotate270FlipNone)
+                  End Select
+               End If
+
+               ' The chart only uses ~240 px and the Person form is smaller still, so cap the
+               ' stored copy at MaxPhotoHeight instead of keeping a multi-MB camera original.
+               Dim h As Integer = Math.Min(img.Height, MaxPhotoHeight)
+               Dim w As Integer = Math.Max(1, CInt(img.Width * (h / img.Height)))
+               Using bmp As New Bitmap(w, h)
+                  Using g As Graphics = Graphics.FromImage(bmp)
+                     g.InterpolationMode = Drawing2D.InterpolationMode.HighQualityBicubic
+                     g.DrawImage(img, 0, 0, w, h)
+                  End Using
+                  bmp.Save(dest, System.Drawing.Imaging.ImageFormat.Png)
+               End Using
             End Using
          End Using
       End Sub
@@ -117,10 +139,42 @@ Namespace Bloodlines
          ' Write to a temp file first, then swap it in: a crash or full disk mid-write
          ' can't leave the only copy of the tree half-written.
          Dim tmp As String = path & ".tmp"
-         File.WriteAllText(tmp, JsonSerializer.Serialize(Me, opts))
-         File.Move(tmp, path, True)
+         Try
+            File.WriteAllText(tmp, JsonSerializer.Serialize(Me, opts))
+#If NETFRAMEWORK Then
+            ' .NET Framework's File.Move can't overwrite; File.Replace swaps the files in one step
+            If File.Exists(path) Then
+               File.Replace(tmp, path, Nothing)
+            Else
+               File.Move(tmp, path)
+            End If
+#Else
+            File.Move(tmp, path, True)
+#End If
+         Catch
+            ' don't leave a half-written .tmp behind
+            Try
+               File.Delete(tmp)
+            Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException
+            End Try
+            Throw
+         End Try
          SourcePath = path
       End Sub
+
+      ' Saves the tree and shows a message instead of throwing when the file can't be written
+      ' (locked, disk full, read-only folder...). Returns False if the save failed; the edits
+      ' are still in memory, so the next successful save writes them.
+      Public Function TrySave() As Boolean
+         Try
+            Save()
+            Return True
+         Catch ex As Exception When TypeOf ex Is IOException OrElse TypeOf ex Is UnauthorizedAccessException
+            MessageBox.Show($"Could not save the tree '{Name}':{Environment.NewLine}{ex.Message}",
+                            "Save tree", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Return False
+         End Try
+      End Function
 
       Public Shared Function Load(path As String) As FamilyTree
          Dim tree As FamilyTree

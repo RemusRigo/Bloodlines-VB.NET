@@ -1,16 +1,18 @@
 # Bloodlines
 Bloodlines: a Windows family tree app
 
+![Screenshot](https://github.com/RemusRigo/Bloodlines-VB.NET/blob/main/Screenshots/Screenshot.png)
 
 
-## Author
+
+## 👤 Author
 
 * [@remusrigo](https://github.com/RemusRigo)
 * [@remusrigo](https://sourceforge.net/u/remusrigo/profile)
 
 
 
-## Features
+## ✨ Features
 
 * Person details: first/last/birth name, sex, birth & death date and place, notes, profile picture
 * Relationships: Father, Mother, Spouse, Divorced, Partner
@@ -27,28 +29,41 @@ Bloodlines: a Windows family tree app
 
 
 
-## User's Guide
+## ⚙️ User's Guide
 
-See the [User's Guide](UsersGuide.md) for downloads, runtimes, installation and usage.
+See the [User's Guide](Users%20Guide.md) for downloads, runtimes, installation and usage.
 
 
 
-## Statistics
+## 🛠️ Statistics
 
 ![VB.NET](https://img.shields.io/badge/Language-VB.NET-blue)
+<br>
 ![API](https://img.shields.io/badge/API-User32-lightblue)
+<br>
+![.NET4.8](https://img.shields.io/badge/Runtime-.NET%204.8-lightblue)
 ![.NET8.0](https://img.shields.io/badge/Runtime-.NET%208.0-lightblue)
 ![.NET10.0](https://img.shields.io/badge/Runtime-.NET%2010.0-lightblue)
+<br>
 ![VS](https://img.shields.io/badge/IDE-Visual%20Studio-purple)
+<br>
 ![JSON](https://img.shields.io/badge/File-JSON-yellow)
 <br>
 ![status](https://img.shields.io/badge/status-completed-brightgreen)
-![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/RemusRigo/Bloodlines-VB.NET/total)
+<br>
+![Downloads](https://img.shields.io/github/downloads/RemusRigo/Bloodlines-VB.NET/total)
 
 
 
-## Roadmap
+## 🗺️ Roadmap
 
+* 2026-11-26: Add: .NET 4.8 framework
+* 2026-11-21: Fix: Dates before 1753 so the app doesn't crash
+* 2026-11-21: Fix: Lines and card borders are nearly invisible when printed
+* 2026-11-21: Fix: When canceling "Add relative" leaves an empty ID
+* 2026-11-21: Fix: Rebuild photo index after a new profile image is added (so you don't have to reload the tree)
+* 2026-11-21: Fix: Check profile photo for EXIF Orientation and flip image if it is not displayed correctly
+* 2026-11-21: Fix: Add exceptions for saving the Tree
 * 2026-09-30: Add: Print and Export (PNG/JPG) the whole tree chart
 * 2026-09-30: Add: Settings: tree view modes (Normal, 1st Line Siblings, All Relatives)
 * 2026-09-30: Add: Divorced and Partner relationships

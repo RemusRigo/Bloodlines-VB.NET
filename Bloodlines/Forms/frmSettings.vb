@@ -8,6 +8,7 @@ Public Class frmSettings
    Friend Property Settings As AppSettings
 
    Private Sub frmSettings_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+      Me.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath)   ' exe icon (no binary resource in the .resx, needed for net48)
       Select Case Settings.ViewMode
          Case TreeViewMode.Siblings : rBtnSiblings.Checked = True
          Case TreeViewMode.Full : rBtnFullTree.Checked = True

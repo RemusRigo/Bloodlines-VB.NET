@@ -22,7 +22,6 @@ Partial Class frmPerson
    'Do not modify it using the code editor.
    <System.Diagnostics.DebuggerStepThrough()> _
    Private Sub InitializeComponent()
-      Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(frmPerson))
       btnOk = New Button()
       lblID = New Label()
       txtBoxID = New TextBox()
@@ -86,7 +85,6 @@ Partial Class frmPerson
       ' 
       txtBoxID.Location = New Point(98, 6)
       txtBoxID.Name = "txtBoxID"
-      txtBoxID.PlaceholderText = "ID"
       txtBoxID.ReadOnly = True
       txtBoxID.Size = New Size(135, 23)
       txtBoxID.TabIndex = 2
@@ -95,7 +93,6 @@ Partial Class frmPerson
       ' 
       txtBoxFirstName.Location = New Point(98, 33)
       txtBoxFirstName.Name = "txtBoxFirstName"
-      txtBoxFirstName.PlaceholderText = "First Name"
       txtBoxFirstName.Size = New Size(135, 23)
       txtBoxFirstName.TabIndex = 4
       ' 
@@ -112,7 +109,6 @@ Partial Class frmPerson
       ' 
       txtBoxLastName.Location = New Point(98, 60)
       txtBoxLastName.Name = "txtBoxLastName"
-      txtBoxLastName.PlaceholderText = "Last Name"
       txtBoxLastName.Size = New Size(135, 23)
       txtBoxLastName.TabIndex = 6
       ' 
@@ -159,7 +155,6 @@ Partial Class frmPerson
       txtBoxNotes.Location = New Point(3, 19)
       txtBoxNotes.Multiline = True
       txtBoxNotes.Name = "txtBoxNotes"
-      txtBoxNotes.PlaceholderText = "Notes"
       txtBoxNotes.Size = New Size(273, 378)
       txtBoxNotes.TabIndex = 3
       ' 
@@ -290,7 +285,6 @@ Partial Class frmPerson
       ' btnPrev
       ' 
       btnPrev.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
-      btnPrev.Image = CType(resources.GetObject("btnPrev.Image"), Image)
       btnPrev.Location = New Point(5, 402)
       btnPrev.Name = "btnPrev"
       btnPrev.Size = New Size(26, 26)
@@ -300,7 +294,6 @@ Partial Class frmPerson
       ' btnNext
       ' 
       btnNext.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
-      btnNext.Image = CType(resources.GetObject("btnNext.Image"), Image)
       btnNext.Location = New Point(69, 402)
       btnNext.Name = "btnNext"
       btnNext.Size = New Size(26, 26)
@@ -311,7 +304,6 @@ Partial Class frmPerson
       ' 
       txtBoxBirthName.Location = New Point(98, 89)
       txtBoxBirthName.Name = "txtBoxBirthName"
-      txtBoxBirthName.PlaceholderText = "Birth Name"
       txtBoxBirthName.Size = New Size(135, 23)
       txtBoxBirthName.TabIndex = 24
       ' 
@@ -328,7 +320,6 @@ Partial Class frmPerson
       ' 
       txtBoxBirthPlace.Location = New Point(98, 172)
       txtBoxBirthPlace.Name = "txtBoxBirthPlace"
-      txtBoxBirthPlace.PlaceholderText = "Birth Place"
       txtBoxBirthPlace.Size = New Size(135, 23)
       txtBoxBirthPlace.TabIndex = 26
       ' 
@@ -345,7 +336,6 @@ Partial Class frmPerson
       ' 
       txtBoxDeathPlace.Location = New Point(98, 230)
       txtBoxDeathPlace.Name = "txtBoxDeathPlace"
-      txtBoxDeathPlace.PlaceholderText = "Death Place"
       txtBoxDeathPlace.Size = New Size(135, 23)
       txtBoxDeathPlace.TabIndex = 28
       ' 
@@ -361,7 +351,6 @@ Partial Class frmPerson
       ' btnAdd
       ' 
       btnAdd.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left
-      btnAdd.Image = CType(resources.GetObject("btnAdd.Image"), Image)
       btnAdd.Location = New Point(37, 402)
       btnAdd.Name = "btnAdd"
       btnAdd.Size = New Size(26, 26)
@@ -372,7 +361,6 @@ Partial Class frmPerson
       ' 
       txtBoxTreeLink.Location = New Point(325, 410)
       txtBoxTreeLink.Name = "txtBoxTreeLink"
-      txtBoxTreeLink.PlaceholderText = "Tree Link"
       txtBoxTreeLink.Size = New Size(199, 23)
       txtBoxTreeLink.TabIndex = 31
       ' 
@@ -417,7 +405,6 @@ Partial Class frmPerson
       Controls.Add(txtBoxID)
       Controls.Add(lblID)
       Controls.Add(btnOk)
-      Icon = CType(resources.GetObject("$this.Icon"), Icon)
       Name = "frmPerson"
       StartPosition = FormStartPosition.CenterParent
       Text = "Person"

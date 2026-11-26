@@ -48,10 +48,8 @@ Public Class frmPerson
          txtBoxBirthPlace.Clear()
          txtBoxDeathPlace.Clear()
          cbSex.SelectedIndex = 0
-         chkBoxBirthDate.Checked = False
-         chkBoxDeathDate.Checked = False
-         dtPickerBirthDate.Enabled = False
-         dtPickerDeathDate.Enabled = False
+         ShowDate(chkBoxBirthDate, dtPickerBirthDate, Nothing, _birthKept)
+         ShowDate(chkBoxDeathDate, dtPickerDeathDate, Nothing, _deathKept)
          txtBoxNotes.Clear()
          txtBoxTreeLink.Clear()
       Else
@@ -65,13 +63,8 @@ Public Class frmPerson
          txtBoxDeathPlace.Text = p.DeathPlace
          cbSex.SelectedIndex = If(p.Sex.HasValue, cbSex.Items.IndexOf(p.Sex.Value), 0)
 
-         chkBoxBirthDate.Checked = p.BirthDate.HasValue
-         If p.BirthDate.HasValue Then dtPickerBirthDate.Value = p.BirthDate.Value
-         dtPickerBirthDate.Enabled = chkBoxBirthDate.Checked
-
-         chkBoxDeathDate.Checked = p.DeathDate.HasValue
-         If p.DeathDate.HasValue Then dtPickerDeathDate.Value = p.DeathDate.Value
-         dtPickerDeathDate.Enabled = chkBoxDeathDate.Checked
+         ShowDate(chkBoxBirthDate, dtPickerBirthDate, p.BirthDate, _birthKept)
+         ShowDate(chkBoxDeathDate, dtPickerDeathDate, p.DeathDate, _deathKept)
 
          txtBoxNotes.Text = p.Notes
          txtBoxTreeLink.Text = p.TreeLink
@@ -101,12 +94,58 @@ Public Class frmPerson
       Else
          p.Sex = Nothing
       End If
-      ' .Date: the picker's Value carries the time of day it was created at, which ended up in the JSON
-      p.BirthDate = If(chkBoxBirthDate.Checked, CType(dtPickerBirthDate.Value.Date, Date?), Nothing)
-      p.DeathDate = If(chkBoxDeathDate.Checked, CType(dtPickerDeathDate.Value.Date, Date?), Nothing)
+      p.BirthDate = PickedDate(chkBoxBirthDate, dtPickerBirthDate, _birthKept)
+      p.DeathDate = PickedDate(chkBoxDeathDate, dtPickerDeathDate, _deathKept)
       p.Notes = txtBoxNotes.Text
       Dim link As String = NormalizeTreeLink(txtBoxTreeLink.Text)
       p.TreeLink = If(IsOwnTree(link), Nothing, link)   ' a link to the open tree would do nothing
+   End Sub
+
+   ' A DateTimePicker can't hold a date before 1753 (its MinDate) - setting one throws - but
+   ' older dates are common in genealogy. Such a date (from the file) is kept here, shown in
+   ' the picker as literal text, and saved back unchanged unless the user picks a new date.
+   Private _birthKept As Date?
+   Private _deathKept As Date?
+
+   Private Shared Sub ShowDate(chk As CheckBox, picker As DateTimePicker, value As Date?, ByRef kept As Date?)
+      kept = Nothing
+      picker.Format = DateTimePickerFormat.Short
+      chk.Checked = value.HasValue
+      picker.Enabled = chk.Checked
+      If Not value.HasValue Then Return
+
+      If value.Value >= picker.MinDate AndAlso value.Value <= picker.MaxDate Then
+         picker.Value = value.Value
+      Else
+         picker.Value = picker.MinDate      ' fires ValueChanged, so set `kept` after this
+         kept = value
+         picker.CustomFormat = "'" & value.Value.ToString("d") & "'"   ' quoted = shown as-is
+         picker.Format = DateTimePickerFormat.Custom
+      End If
+   End Sub
+
+   ' The date to store: Nothing when unticked, the kept out-of-range date if the user
+   ' hasn't touched the picker, otherwise the picked day (.Date: the picker's Value carries
+   ' the time of day it was created at, which used to end up in the JSON).
+   Private Shared Function PickedDate(chk As CheckBox, picker As DateTimePicker, kept As Date?) As Date?
+      If Not chk.Checked Then Return Nothing
+      If kept.HasValue Then Return kept
+      Return picker.Value.Date
+   End Function
+
+   ' The user picked a date themselves: forget the kept one and show the picker normally.
+   Private Shared Sub ForgetKeptDate(picker As DateTimePicker, ByRef kept As Date?)
+      If Not kept.HasValue Then Return
+      kept = Nothing
+      picker.Format = DateTimePickerFormat.Short
+   End Sub
+
+   Private Sub dtPickerBirthDate_ValueChanged(sender As Object, e As EventArgs) Handles dtPickerBirthDate.ValueChanged
+      ForgetKeptDate(dtPickerBirthDate, _birthKept)
+   End Sub
+
+   Private Sub dtPickerDeathDate_ValueChanged(sender As Object, e As EventArgs) Handles dtPickerDeathDate.ValueChanged
+      ForgetKeptDate(dtPickerDeathDate, _deathKept)
    End Sub
 
    Private Function IsOwnTree(link As String) As Boolean
@@ -145,8 +184,9 @@ Public Class frmPerson
 
    ' Save what's on screen. Returns False to cancel navigation (e.g. failed validation).
    Private Function CommitCurrent() As Boolean
-      If chkBoxBirthDate.Checked AndAlso chkBoxDeathDate.Checked AndAlso
-         dtPickerDeathDate.Value.Date < dtPickerBirthDate.Value.Date Then
+      Dim born As Date? = PickedDate(chkBoxBirthDate, dtPickerBirthDate, _birthKept)
+      Dim died As Date? = PickedDate(chkBoxDeathDate, dtPickerDeathDate, _deathKept)
+      If born.HasValue AndAlso died.HasValue AndAlso died.Value < born.Value Then
          MessageBox.Show("The death date is before the birth date.", "Person", MessageBoxButtons.OK, MessageBoxIcon.Warning)
          dtPickerDeathDate.Focus()
          Return False
@@ -164,7 +204,7 @@ Public Class frmPerson
          Tree.People.Add(p)
          currentID = Tree.People.Count - 1
       End If
-      Tree.Save()
+      Tree.TrySave()      ' on failure the edits stay in memory, so navigating/closing can go on
       Return True
    End Function
 
@@ -188,8 +228,42 @@ Public Class frmPerson
    End Sub
 
 
+#If NETFRAMEWORK Then
+   Private Const EM_SETCUEBANNER As Integer = &H1501
+
+   <Runtime.InteropServices.DllImport("user32.dll", CharSet:=Runtime.InteropServices.CharSet.Unicode)>
+   Private Shared Function SendMessage(hWnd As IntPtr, msg As Integer, wParam As IntPtr, lParam As String) As IntPtr
+   End Function
+#End If
+
+   ' Grey hint text shown while the text box is empty
+   Private Shared Sub SetPlaceholder(txtBox As TextBox, text As String)
+#If NETFRAMEWORK Then
+      SendMessage(txtBox.Handle, EM_SETCUEBANNER, New IntPtr(1), text)   ' wParam 1: keep showing while focused
+#Else
+      txtBox.PlaceholderText = text
+#End If
+   End Sub
+
    Private Sub frmPerson_Load(sender As Object, e As EventArgs) Handles MyBase.Load
       Me.Text = Tree.Name
+
+      ' icon and button images: loaded from the exe / embedded PNGs (no binary resources in the .resx, needed for net48)
+      Me.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath)
+      btnPrev.Image = frmAbout.LoadImage("Prev.png")
+      btnNext.Image = frmAbout.LoadImage("Next.png")
+      btnAdd.Image = frmAbout.LoadImage("Add.png")
+
+      ' placeholders: set here, not in the designer (TextBox.PlaceholderText is .NET 5+ only)
+      SetPlaceholder(txtBoxID, "ID")
+      SetPlaceholder(txtBoxFirstName, "First Name")
+      SetPlaceholder(txtBoxLastName, "Last Name")
+      SetPlaceholder(txtBoxBirthName, "Birth Name")
+      SetPlaceholder(txtBoxBirthPlace, "Birth Place")
+      SetPlaceholder(txtBoxDeathPlace, "Death Place")
+      SetPlaceholder(txtBoxTreeLink, "Tree Link")
+      SetPlaceholder(txtBoxNotes, "Notes")   ' net48: Windows shows cue banners only on single-line text boxes
+
       txtBoxID.Text = Tree.NextID().ToString()
 
       cbSex.Items.Clear()
@@ -348,7 +422,7 @@ Public Class frmPerson
          End If
       End If
 
-      Tree.Save()
+      Tree.TrySave()
       RefreshConnections()
    End Sub
 
@@ -366,7 +440,7 @@ Public Class frmPerson
          End If
       End If
 
-      Tree.Save()
+      Tree.TrySave()
       RefreshConnections()
    End Sub
 

@@ -58,10 +58,21 @@ Public Class frmUCTree
    ' the host form loads that tree and shows it.
    Public Event OpenTreeRequested(treeName As String)
 
-   ' When this chart was loaded (Environment.TickCount64). "+" clicks within one double-click
+   ' When this chart was loaded (TickCountMs). "+" clicks within one double-click
    ' interval of that are ignored: if the user double-clicked a "+" out of habit, the first
    ' click already switched trees, and the second must not hit a "+" on the new chart and bounce back.
    Private _loadedAt As Long
+
+   ' Milliseconds since system start, as a Long (Environment.TickCount64 is .NET 5+ only)
+   Private Shared ReadOnly Property TickCountMs As Long
+      Get
+#If NETFRAMEWORK Then
+         Return Stopwatch.GetTimestamp() \ (Stopwatch.Frequency \ 1000)
+#Else
+         Return Environment.TickCount64
+#End If
+      End Get
+   End Property
    ' --- zoom/pan state ---
    ' The chart is drawn in its own unscaled "content" coordinate space (see LayoutNodes),
    ' then mapped onto the screen each paint via a translate-then-scale transform:
@@ -76,6 +87,11 @@ Public Class frmUCTree
    Private _panY As Single = 0
    Private _dragging As Boolean                 ' True while the left mouse button is held for panning
    Private _dragLast As Point                    ' last mouse position seen during a drag, to compute deltas
+
+   ' Width of the thin lines (connectors, card borders, the solid Spouse line). 0 = a GDI+
+   ' "cosmetic" pen, always exactly 1 device pixel: right on screen and in an exported image,
+   ' but only ~0.04 mm on a 600 dpi printer - so PrintPage sets this to 1 while it draws.
+   Private _hairline As Single = 0
 
    ' One box in the chart - a thin wrapper around a Person plus its computed layout position.
    Private Class Node
@@ -137,7 +153,7 @@ Public Class frmUCTree
    ' ---------------------------------------------------------------- setup ---
 
    Private Sub frmUCTree_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-      _loadedAt = Environment.TickCount64
+      _loadedAt = TickCountMs
       _nameFont = New Font(Font.FontFamily, Font.Size + 2.0F)
       _dateFont = New Font(Font.FontFamily, Font.Size + 0.5F)
 
@@ -716,7 +732,7 @@ Public Class frmUCTree
       ' A click on a person's "+" tree-link button opens that tree instead of starting a pan.
       Dim linked As Person = LinkBadgeAt(e.Location)
       If linked IsNot Nothing Then
-         If Environment.TickCount64 - _loadedAt >= SystemInformation.DoubleClickTime Then
+         If TickCountMs - _loadedAt >= SystemInformation.DoubleClickTime Then
             RaiseEvent OpenTreeRequested(linked.TreeLink.Trim())
          End If
          Return
@@ -763,7 +779,7 @@ Public Class frmUCTree
    ' (screen pan/zoom, exported bitmap, or printed page).
    Private Sub DrawChart(g As Graphics)
       ' Connector lines first, so they sit behind the boxes.
-      Using pen As New Pen(Color.FromArgb(150, 150, 150), 0)
+      Using pen As New Pen(Color.FromArgb(150, 150, 150), _hairline)
          For Each n As Node In _allNodes
             DrawDownConnector(g, pen, n)
             DrawUpConnector(g, pen, n)
@@ -874,8 +890,9 @@ Public Class frmUCTree
 
    ' The line joining a couple: solid for Spouse, dashed (- - -) for Divorced, dotted (. . .)
    ' for Partner. The patterned pens are 1.5 wide rather than cosmetic (width 0), so the
-   ' dashes/dots scale with the zoom like the boxes do and stay readable.
-   Private Shared Function CouplePen(type As Relationship.RelationType) As Pen
+   ' dashes/dots scale with the zoom like the boxes do and stay readable. The solid one is a
+   ' hairline (see _hairline).
+   Private Function CouplePen(type As Relationship.RelationType) As Pen
       Dim color As Color = Color.FromArgb(150, 150, 150)
       Select Case type
          Case Relationship.RelationType.Divorced
@@ -883,7 +900,7 @@ Public Class frmUCTree
          Case Relationship.RelationType.Partner
             Return New Pen(color, 1.5F) With {.DashPattern = {1.0F, 2.0F}}   ' 1.5px dot, 3px gap
          Case Else
-            Return New Pen(color, 0)
+            Return New Pen(color, _hairline)
       End Select
    End Function
 
@@ -906,8 +923,9 @@ Public Class frmUCTree
       If isFocus Then
          ' Pen width is divided by _zoom so the focus outline stays a constant
          ' ~2 screen pixels thick regardless of zoom level (the Graphics transform
-         ' otherwise scales pen widths along with everything else).
-         Using pen As New Pen(Color.FromArgb(33, 102, 172), 2 / _zoom)
+         ' otherwise scales pen widths along with everything else). When printing it's a
+         ' fixed 2 content units instead, so it doesn't depend on the on-screen zoom.
+         Using pen As New Pen(Color.FromArgb(33, 102, 172), If(_hairline = 0, 2 / _zoom, 2.0F))
             If isRepeat Then pen.DashStyle = DashStyle.Dash
             g.DrawRectangle(pen, rect)
          End Using
@@ -916,7 +934,7 @@ Public Class frmUCTree
          ' unaffected by the world transform, so thin borders don't vanish when
          ' zoomed out or turn blurry when zoomed in. A repeat's dashed border is
          ' 1.5 wide instead, so its dashes scale with the zoom like the couple lines.
-         Using pen As New Pen(Color.FromArgb(120, 120, 120), If(isRepeat, 1.5F, 0))
+         Using pen As New Pen(Color.FromArgb(120, 120, 120), If(isRepeat, 1.5F, _hairline))
             If isRepeat Then pen.DashPattern = {3.0F, 2.0F}
             g.DrawRectangle(pen, rect)
          End Using
@@ -1201,23 +1219,38 @@ Public Class frmUCTree
       Dim np As New Person With {.ID = Tree.NextID()}
       link(np)
       Tree.People.Add(np)
-      Tree.Save()
+      Tree.TrySave()
 
       frmPerson.Tree = Tree
       frmPerson.FocusID = np.ID
       frmPerson.ShowDialog(Me)
+
+      ' Closed without entering a name (e.g. changed their mind): drop the blank person and
+      ' every link to them, instead of leaving a nameless "#N" card in the tree for good.
+      If String.IsNullOrWhiteSpace(np.FirstName) AndAlso String.IsNullOrWhiteSpace(np.LastName) Then
+         Tree.People.Remove(np)
+         For Each other As Person In Tree.People
+            other.Relationships.RemoveAll(Function(r) r.RelativeID = np.ID)
+         Next
+         Tree.TrySave()
+      End If
 
       RebuildIndex()
       SetFocus(anchor)
    End Sub
 
    ' Anyone added via frmPerson's own Connections list while it was open needs to be
-   ' in _byId before the chart can draw links to them.
+   ' in _byId before the chart can draw links to them. frmPerson may also have changed
+   ' someone's photo, so drop the cached photos too; GetPhoto reloads them on the next paint.
    Private Sub RebuildIndex()
       _byId.Clear()
       For Each person As Person In Tree.People
          _byId(person.ID) = person
       Next
+      For Each img As Image In _photos.Values
+         img?.Dispose()
+      Next
+      _photos.Clear()
    End Sub
 
    ' Builds the multi-line tooltip text shown on hover.
@@ -1341,7 +1374,12 @@ Public Class frmUCTree
             g.TranslateTransform(offX, offY)
             g.ScaleTransform(scale, scale)
             g.TranslateTransform(-originX, -originY)
-            DrawChart(g)
+            _hairline = 1.0F   ' 1/100 inch at 100%: visible on paper (see _hairline)
+            Try
+               DrawChart(g)
+            Finally
+               _hairline = 0
+            End Try
 
             page += 1
             e.HasMorePages = page < cols * rows

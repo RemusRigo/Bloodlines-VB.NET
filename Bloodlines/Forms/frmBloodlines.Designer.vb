@@ -22,7 +22,6 @@ Partial Class frmBloodlines
    'Do not modify it using the code editor.
    <System.Diagnostics.DebuggerStepThrough()>
    Private Sub InitializeComponent()
-      Dim resources As System.ComponentModel.ComponentResourceManager = New System.ComponentModel.ComponentResourceManager(GetType(frmBloodlines))
       StatusStrip = New StatusStrip()
       ssStatusLabel = New ToolStripStatusLabel()
       ToolStrip = New ToolStrip()
@@ -67,7 +66,6 @@ Partial Class frmBloodlines
       ' tsBtnNew
       ' 
       tsBtnNew.DisplayStyle = ToolStripItemDisplayStyle.Image
-      tsBtnNew.Image = CType(resources.GetObject("tsBtnNew.Image"), Image)
       tsBtnNew.ImageTransparentColor = Color.Magenta
       tsBtnNew.Name = "tsBtnNew"
       tsBtnNew.Size = New Size(23, 22)
@@ -76,7 +74,6 @@ Partial Class frmBloodlines
       ' tsBtnLoad
       ' 
       tsBtnLoad.DisplayStyle = ToolStripItemDisplayStyle.Image
-      tsBtnLoad.Image = CType(resources.GetObject("tsBtnLoad.Image"), Image)
       tsBtnLoad.ImageTransparentColor = Color.Magenta
       tsBtnLoad.Name = "tsBtnLoad"
       tsBtnLoad.Size = New Size(23, 22)
@@ -91,7 +88,6 @@ Partial Class frmBloodlines
       ' tsBtnMembers
       ' 
       tsBtnMembers.DisplayStyle = ToolStripItemDisplayStyle.Image
-      tsBtnMembers.Image = CType(resources.GetObject("tsBtnMembers.Image"), Image)
       tsBtnMembers.ImageTransparentColor = Color.Magenta
       tsBtnMembers.Name = "tsBtnMembers"
       tsBtnMembers.Size = New Size(23, 22)
@@ -100,7 +96,6 @@ Partial Class frmBloodlines
       ' tsBtnList
       ' 
       tsBtnList.DisplayStyle = ToolStripItemDisplayStyle.Image
-      tsBtnList.Image = CType(resources.GetObject("tsBtnList.Image"), Image)
       tsBtnList.ImageTransparentColor = Color.Magenta
       tsBtnList.Name = "tsBtnList"
       tsBtnList.Size = New Size(23, 22)
@@ -109,7 +104,6 @@ Partial Class frmBloodlines
       ' tsBtnTree
       ' 
       tsBtnTree.DisplayStyle = ToolStripItemDisplayStyle.Image
-      tsBtnTree.Image = CType(resources.GetObject("tsBtnTree.Image"), Image)
       tsBtnTree.ImageTransparentColor = Color.Magenta
       tsBtnTree.Name = "tsBtnTree"
       tsBtnTree.Size = New Size(23, 22)
@@ -123,7 +117,6 @@ Partial Class frmBloodlines
       ' tsBtnPrint
       ' 
       tsBtnPrint.DisplayStyle = ToolStripItemDisplayStyle.Image
-      tsBtnPrint.Image = CType(resources.GetObject("tsBtnPrint.Image"), Image)
       tsBtnPrint.ImageTransparentColor = Color.Magenta
       tsBtnPrint.Name = "tsBtnPrint"
       tsBtnPrint.Size = New Size(23, 22)
@@ -133,7 +126,6 @@ Partial Class frmBloodlines
       ' tsBtnExport
       ' 
       tsBtnExport.DisplayStyle = ToolStripItemDisplayStyle.Image
-      tsBtnExport.Image = CType(resources.GetObject("tsBtnExport.Image"), Image)
       tsBtnExport.ImageTransparentColor = Color.Magenta
       tsBtnExport.Name = "tsBtnExport"
       tsBtnExport.Size = New Size(23, 22)
@@ -148,7 +140,6 @@ Partial Class frmBloodlines
       ' tsBtnSettings
       ' 
       tsBtnSettings.DisplayStyle = ToolStripItemDisplayStyle.Image
-      tsBtnSettings.Image = CType(resources.GetObject("tsBtnSettings.Image"), Image)
       tsBtnSettings.ImageTransparentColor = Color.Magenta
       tsBtnSettings.Name = "tsBtnSettings"
       tsBtnSettings.Size = New Size(23, 22)
@@ -172,7 +163,6 @@ Partial Class frmBloodlines
       Controls.Add(pnlPlaceholder)
       Controls.Add(ToolStrip)
       Controls.Add(StatusStrip)
-      Icon = CType(resources.GetObject("$this.Icon"), Icon)
       Name = "frmBloodlines"
       StartPosition = FormStartPosition.CenterScreen
       Text = "Bloodlines"
