@@ -1,7 +1,7 @@
 # Bloodlines
 Bloodlines: a Windows family tree app
 
-![Screenshot](https://github.com/RemusRigo/Bloodlines-VB.NET/blob/main/Screenshots/Screenshot.png)
+![Screenshot](https://github.com/RemusRigo/Bloodlines-VB.NET/blob/main/Screenshots/Screenshot1.png)
 
 
 
